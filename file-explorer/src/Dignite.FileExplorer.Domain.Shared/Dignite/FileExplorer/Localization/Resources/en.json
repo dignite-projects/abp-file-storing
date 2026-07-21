@@ -1,0 +1,29 @@
+{
+  "culture": "en",
+  "texts": {
+    "FileExplorer:Directory:0001": "The directory already exists!",
+    "FileExplorer:Directory:0002": "The directory does not exist!",
+    "FileExplorer:Directory:0003": "The directory name is invalid!",
+    "FileExplorer:Directory:0004": "Invalid move!",
+    "FileExplorer:Directory:0005": "Moving to subdirectories is prohibited!",
+    "FileExplorer:File:0001": "Cell Name Not Applicable!",
+    "FileExplorer:File:0002": "Cell name not available！",
+    "FileExplorer": "File Explorer",
+    "Permission:FileExplorer": "File Explorer",
+    "Permission:Management": "Manage Files",
+    "MyDirectories": "My Directory",
+    "NewDirectory": "New Directory",
+    "DirectoryName": "Directory Name",
+    "DeletionConfirmationMessage": "Are you sure you want to delete {0}?",
+    "FileName": "File Name",
+    "FileSize": "File Size",
+    "CreationTime": "Creation Time",
+    "ExceedsMaximumSize": "The uploaded file size cannot exceed {0}.",
+    "AllFiles": "All Files",
+    "UploadFiles": "Upload Files",
+    "Confirm": "OK",
+    "Directory": "Directory",
+    "SelectFile": "Select File",
+    "DirectoryName{0}AlreadyExist": "The directory name \"{0}\" already exist!"
+  }
+}

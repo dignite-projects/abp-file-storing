@@ -7,19 +7,26 @@
   <ItemGroup Label="ABP 10.5.0">
     <PackageVersion Include="Volo.Abp.Core" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.BlobStoring" Version="10.5.0" />
+    <PackageVersion Include="Volo.Abp.Validation" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Imaging.Abstractions" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Imaging.ImageSharp" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Ddd.Domain" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Ddd.Application" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Ddd.Application.Contracts" Version="10.5.0" />
+    <PackageVersion Include="Volo.Abp.Authorization" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Authorization.Abstractions" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Http.Client" Version="10.5.0" />
+    <PackageVersion Include="Volo.Abp.AutoMapper" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.EntityFrameworkCore" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.EntityFrameworkCore.Sqlite" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.MongoDB" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Autofac" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.TestBase" Version="10.5.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Embedded static and localization resources">
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.7" />
   </ItemGroup>
 
   <ItemGroup Label="Test stack">

@@ -6,7 +6,16 @@
   </Folder>
   <Folder Name="/core/test/" />
   <Folder Name="/file-explorer/" />
-  <Folder Name="/file-explorer/src/" />
+  <Folder Name="/file-explorer/src/">
+    <Project Path="file-explorer/src/Dignite.FileExplorer.Application.Contracts/Dignite.FileExplorer.Application.Contracts.csproj" />
+    <Project Path="file-explorer/src/Dignite.FileExplorer.Application/Dignite.FileExplorer.Application.csproj" />
+    <Project Path="file-explorer/src/Dignite.FileExplorer.Domain.Shared/Dignite.FileExplorer.Domain.Shared.csproj" />
+    <Project Path="file-explorer/src/Dignite.FileExplorer.Domain/Dignite.FileExplorer.Domain.csproj" />
+    <Project Path="file-explorer/src/Dignite.FileExplorer.EntityFrameworkCore/Dignite.FileExplorer.EntityFrameworkCore.csproj" />
+    <Project Path="file-explorer/src/Dignite.FileExplorer.HttpApi.Client/Dignite.FileExplorer.HttpApi.Client.csproj" />
+    <Project Path="file-explorer/src/Dignite.FileExplorer.HttpApi/Dignite.FileExplorer.HttpApi.csproj" />
+    <Project Path="file-explorer/src/Dignite.FileExplorer.MongoDB/Dignite.FileExplorer.MongoDB.csproj" />
+  </Folder>
   <Folder Name="/file-explorer/test/" />
   <Folder Name="/host/" />
 </Solution>
