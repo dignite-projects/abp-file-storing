@@ -4,7 +4,9 @@
     <Project Path="core/src/Dignite.Abp.FileStoring.Imaging/Dignite.Abp.FileStoring.Imaging.csproj" />
     <Project Path="core/src/Dignite.Abp.FileStoring/Dignite.Abp.FileStoring.csproj" />
   </Folder>
-  <Folder Name="/core/test/" />
+  <Folder Name="/core/test/">
+    <Project Path="core/test/Dignite.Abp.FileStoring.Tests/Dignite.Abp.FileStoring.Tests.csproj" />
+  </Folder>
   <Folder Name="/file-explorer/" />
   <Folder Name="/file-explorer/src/">
     <Project Path="file-explorer/src/Dignite.FileExplorer.Application.Contracts/Dignite.FileExplorer.Application.Contracts.csproj" />
