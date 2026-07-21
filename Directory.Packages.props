@@ -7,7 +7,8 @@
   <ItemGroup Label="ABP 10.5.0">
     <PackageVersion Include="Volo.Abp.Core" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.BlobStoring" Version="10.5.0" />
-    <PackageVersion Include="Volo.Abp.Imaging" Version="10.5.0" />
+    <PackageVersion Include="Volo.Abp.Imaging.Abstractions" Version="10.5.0" />
+    <PackageVersion Include="Volo.Abp.Imaging.ImageSharp" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Ddd.Domain" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Ddd.Application" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Ddd.Application.Contracts" Version="10.5.0" />
