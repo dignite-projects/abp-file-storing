@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/core/" />
-  <Folder Name="/core/src/" />
+  <Folder Name="/core/src/">
+    <Project Path="core/src/Dignite.Abp.FileStoring/Dignite.Abp.FileStoring.csproj" />
+  </Folder>
   <Folder Name="/core/test/" />
   <Folder Name="/file-explorer/" />
   <Folder Name="/file-explorer/src/" />
