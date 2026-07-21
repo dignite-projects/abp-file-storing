@@ -1,4 +1,3 @@
-import { authGuard, permissionGuard } from '@abp/ng.core';
 import { Routes } from '@angular/router';
 export const APP_ROUTES: Routes = [
   {
@@ -17,10 +16,5 @@ export const APP_ROUTES: Routes = [
   {
     path: 'setting-management',
     loadChildren: () => import('@abp/ng.setting-management').then(c => c.createRoutes()),
-  },
-  {
-    path: 'notifications',
-    canActivate: [authGuard],
-    loadComponent: () => import('./notifications/notifications.component').then(c => c.NotificationsComponent),
   },
 ];

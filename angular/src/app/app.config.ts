@@ -16,14 +16,8 @@ import { provideRouter } from '@angular/router';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
 import { APP_ROUTE_PROVIDER } from './route.provider';
-import { OrderShippedNotificationDataComponent } from './notifications/order-shipped-notification-data.component';
-import {
-  NotificationDataComponentsService,
-  NotificationEntityLinksService,
-} from '@dignite/abp.ng.notification-center';
-import { provideNotificationCenterConfig } from '@dignite/abp.ng.notification-center/config';
 
-const DIGNITE_REPO_URL = 'https://github.com/dignite-projects/abp-notifications';
+const DIGNITE_REPO_URL = 'https://github.com/dignite-projects/abp-file-storing';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -37,17 +31,6 @@ export const appConfig: ApplicationConfig = {
         authorUrl: 'https://dignite.com',
         links: [{ text: 'About', link: DIGNITE_REPO_URL }],
       });
-    }),
-    provideAppInitializer(() => {
-      inject(NotificationDataComponentsService).register(
-        'Demo.OrderShipped',
-        OrderShippedNotificationDataComponent,
-      );
-      inject(NotificationEntityLinksService).register('Demo.Order', notification =>
-        notification.entityId
-          ? `/notifications?orderId=${encodeURIComponent(notification.entityId)}`
-          : '/notifications',
-      );
     }),
     provideAnimations(),
     provideAbpCore(
@@ -65,6 +48,5 @@ export const appConfig: ApplicationConfig = {
     provideThemeLeptonX(),
     provideSideMenuLayout(),
     provideLogo(withEnvironmentOptions(environment)),
-    provideNotificationCenterConfig(),
   ]
 };

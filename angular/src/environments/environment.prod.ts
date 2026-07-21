@@ -21,7 +21,7 @@ export const environment = {
   apis: {
     default: {
       url: 'https://localhost:44380',
-      rootNamespace: 'Dignite.Abp.NotificationCenter.Web.Host',
+      rootNamespace: 'Dignite.FileExplorer',
     },
     AbpAccountPublic: {
       url: oAuthConfig.issuer,
