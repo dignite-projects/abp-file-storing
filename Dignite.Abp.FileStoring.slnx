@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/core/" />
+  <Folder Name="/core/src/" />
+  <Folder Name="/core/test/" />
+  <Folder Name="/file-explorer/" />
+  <Folder Name="/file-explorer/src/" />
+  <Folder Name="/file-explorer/test/" />
+  <Folder Name="/host/" />
+</Solution>
