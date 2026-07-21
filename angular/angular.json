@@ -209,23 +209,23 @@
         }
       }
     },
-    "notification-center": {
+    "file-explorer": {
       "projectType": "library",
-      "root": "projects/notification-center",
-      "sourceRoot": "projects/notification-center/src",
-      "prefix": "abp",
+      "root": "projects/file-explorer",
+      "sourceRoot": "projects/file-explorer/src",
+      "prefix": "fe",
       "architect": {
         "build": {
           "builder": "@angular/build:ng-packagr",
           "options": {
-            "project": "projects/notification-center/ng-package.json"
+            "project": "projects/file-explorer/ng-package.json"
           },
           "configurations": {
             "production": {
-              "tsConfig": "projects/notification-center/tsconfig.lib.prod.json"
+              "tsConfig": "projects/file-explorer/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "projects/notification-center/tsconfig.lib.json"
+              "tsConfig": "projects/file-explorer/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "production"
@@ -233,15 +233,15 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "projects/notification-center/tsconfig.spec.json"
+            "tsConfig": "projects/file-explorer/tsconfig.spec.json"
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
             "lintFilePatterns": [
-              "projects/notification-center/**/*.ts",
-              "projects/notification-center/**/*.html"
+              "projects/file-explorer/**/*.ts",
+              "projects/file-explorer/**/*.html"
             ]
           }
         }

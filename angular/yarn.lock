@@ -411,7 +411,7 @@
   optionalDependencies:
     lmdb "3.5.1"
 
-"@angular/cdk@^21.0.0":
+"@angular/cdk@^21.0.0", "@angular/cdk@~21.2.0":
   version "21.2.14"
   resolved "https://registry.npmjs.org/@angular/cdk/-/cdk-21.2.14.tgz"
   integrity sha512-806REq/CLf37nEhmmd8Q+ILN8z/RVG2vk2n8YZ/4TdHpcBCi5ux4AxLbpMmduLwGPOzPagJ6ggRzE5fnX0rmcQ==
@@ -1325,7 +1325,7 @@
     "@parcel/watcher-win32-ia32" "2.5.6"
     "@parcel/watcher-win32-x64" "2.5.6"
 
-"@popperjs/core@~2.11.0":
+"@popperjs/core@^2.11.8", "@popperjs/core@~2.11.0":
   version "2.11.8"
   resolved "https://registry.npmjs.org/@popperjs/core/-/core-2.11.8.tgz"
   integrity sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==
@@ -1450,7 +1450,7 @@
   resolved "https://registry.npmjs.org/@standard-schema/spec/-/spec-1.1.0.tgz"
   integrity sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==
 
-"@swimlane/ngx-datatable@~22.0.0":
+"@swimlane/ngx-datatable@^22.0.0", "@swimlane/ngx-datatable@~22.0.0":
   version "22.0.0"
   resolved "https://registry.npmjs.org/@swimlane/ngx-datatable/-/ngx-datatable-22.0.0.tgz"
   integrity sha512-NteAxuMHNnXMeRun0qGZNz5ocoRmoypmhJtfvQRpO6umZPDVlf0+GzlEsTSOfqJNrKiYjtaMJ8EP+1lRYxrigw==
@@ -1994,12 +1994,17 @@ boolbase@^1.0.0:
   resolved "https://registry.npmjs.org/boolbase/-/boolbase-1.0.0.tgz"
   integrity sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==
 
+bootstrap-icons@^1.11.3:
+  version "1.13.1"
+  resolved "https://registry.npmjs.org/bootstrap-icons/-/bootstrap-icons-1.13.1.tgz"
+  integrity sha512-ijombt4v6bv5CLeXvRWKy7CuM3TRTuPEuGaGKvTV5cz65rQSY8RQ2JcHt6b90cBBAC7s8fsf2EkQDldzCoXUjw==
+
 bootstrap-icons@~1.7.2:
   version "1.7.2"
   resolved "https://registry.npmjs.org/bootstrap-icons/-/bootstrap-icons-1.7.2.tgz"
   integrity sha512-NiR2PqC73AQOPdVSu6GJfnk+hN2z6powcistXk1JgPnKuoV2FSdSl26w931Oz9HYbKCcKUSB6ncZTYJAYJl3QQ==
 
-bootstrap@^5.0.0:
+bootstrap@^5.0.0, bootstrap@^5.3.3:
   version "5.3.8"
   resolved "https://registry.npmjs.org/bootstrap/-/bootstrap-5.3.8.tgz"
   integrity sha512-HP1SZDqaLDPwsNiqRqi5NcP0SSXciX2s9E+RyqJIIqGo+vJeN5AJVM98CXmW/Wux0nQ5L7jeWUdplCEf0Ee+tg==
@@ -3863,6 +3868,17 @@ ng-packagr@^21.2.0:
     tinyglobby "^0.2.12"
   optionalDependencies:
     rollup "^4.24.0"
+
+ng-zorro-antd@^21.3.3:
+  version "21.3.3"
+  resolved "https://registry.npmjs.org/ng-zorro-antd/-/ng-zorro-antd-21.3.3.tgz"
+  integrity sha512-70zzTqc2MQI9W+uX+OGdXfT1azbum3X/cdJ1orxLY0grz+deKtH2zVW7bQytHiCWdRe9pP4KtdE5xLY6eYKssw==
+  dependencies:
+    "@angular/cdk" "^21.0.0"
+    "@ant-design/icons-angular" "^21.0.0"
+    "@ctrl/tinycolor" "^3.6.0"
+    date-fns "^2.16.1"
+    tslib "^2.3.0"
 
 ng-zorro-antd@~21.0.0-next.1:
   version "21.0.2"

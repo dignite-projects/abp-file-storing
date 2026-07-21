@@ -1,0 +1,144 @@
+<abp-modal [(visible)]="ModalOpen" (visibleChange)="ModalVisibleChange($event)"
+  [options]="{ size: 'xl', scrollable: false }">
+  <ng-template #abpHeader>
+    <h3>{{'FileExplorer::FileExplorer' | abpLocalization}}</h3>
+  </ng-template>
+  <ng-template #abpBody>
+    <div class="row file-explorer-modal-body file-modal" *ngIf="ModalOpen">
+      <div class="col-3" *ngIf="createDirectoryPermissionName" style="overflow: auto; height: calc(100vh - 240px)">
+        <fe-file-modal-tree [theSelectedTreeNode]="_theSelectedTreeNode" (nodeClick)="_nodeClick($event)"
+          (lookAllBtn)="lookAllFile()" (treeNodeData)="treeNodeData($event)"
+          [fileContainerName]="_fileContainerName"></fe-file-modal-tree>
+      </div>
+      <div [class]="createDirectoryPermissionName?'col-9':'col-12'" style="height: calc(100vh - 240px)">
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+          <div style="flex: 2"><span *ngIf="selectedTable.length>1" class="btn-link"
+              (click.stop)="onDeleteAllSelectFile()" role="button">{{'FileExplorer::Delete' | abpLocalization}}</span>
+          </div>
+          <div class="input-group form-file" style="flex: 2">
+            <input type="file" class="form-control" #fileEdit [multiple]="_multiple" (change)="getFileChange($event)" />
+          </div>
+        </div>
+        <div>
+          <!-- [selectionType]="_multiple?SelectionType.checkbox:SelectionType.single" -->
+          <!-- [selectCheck]="selectCheck" -->
+          <ngx-datatable class="material container-height" [rows]="data.items" [list]="list" columnMode="flex"
+            [headerHeight]="50" [footerHeight]="50" rowHeight="auto" [scrollbarV]="true" [virtualization]="false"
+            [externalPaging]="true" [count]="data.totalCount">
+            <ngx-datatable-column [width]="50" prop="id" [sortable]="false" [canAutoResize]="false" [draggable]="false"
+              [resizeable]="false">
+              <ng-template ngx-datatable-header-template let-value="value" let-allRowsSelected="allRowsSelected"
+                let-selectFn="selectFn">
+                <input type="checkbox" class="form-check-input" *ngIf="_multiple" [checked]="isAllSelected"
+                  (change)="onSelectAllFn($event,data.items)" />
+              </ng-template>
+              <ng-template ngx-datatable-cell-template let-row="row" let-value="value">
+                <input type="checkbox" class="form-check-input" [checked]="selectedcheckbox(value)"
+                  (change)="onCheckboxChangeFn($event,row,data.items)" />
+              </ng-template>
+            </ngx-datatable-column>
+            <ngx-datatable-column [sortable]="false" [flexGrow]="2">
+              <ng-template let-row="row" let-value="value" ngx-datatable-cell-template>
+                <fe-file-preview [width]="'80px'" [src]="row.url" [name]="row.name" [type]="row.mimeType"
+                  [preview]="true"></fe-file-preview>
+              </ng-template>
+            </ngx-datatable-column>
+            <ngx-datatable-column [name]="'FileExplorer::FileName' | abpLocalization" prop="name" [sortable]="false"
+              [flexGrow]="4">
+              <ng-template let-row="row" let-value="value" ngx-datatable-cell-template>
+                <div class="d-flex align-items-start titlehover" *ngIf="newEditRow.id!==row.id">
+                  <span class="me-2">{{ value }}</span>
+                  <i class="fa fa-pencil-square-o" role="button" (click.stop)="onEditFileName(row)" style="line-height:2;" aria-hidden="true"></i>
+                </div>
+                <div *ngIf="FileNameForm&&newEditRow.id===row.id">
+                  <form [formGroup]="FileNameForm" (ngSubmit)="onSubmitFileName($event)">
+                    <div class="d-flex align-items-start">
+                      <div class="me-2">
+                        <input class="form-control " type="text"  formControlName="fileName">
+                      </div>
+                      <button class=" btn btn-sm" type="submit">
+                        <i class="fa-spin fa fa-spinner" *ngIf="isloading"></i>
+                        <i class="fa fa-check" aria-hidden="true" *ngIf="!isloading"></i></button>
+                      <button class=" btn btn-sm" (click.stop)="onCancelFileName(row)"><i class="fa fa-times" type="reset" aria-hidden="true"></i></button>
+                      
+                    </div>
+                  </form>
+                </div>
+              </ng-template>
+            </ngx-datatable-column>
+            <ngx-datatable-column [name]="'FileExplorer::FileSize' | abpLocalization" prop="size" [flexGrow]="1.5">
+              <ng-template let-row="row" let-value="value" ngx-datatable-cell-template>
+                {{(value|formatFileSize) }}
+              </ng-template>
+            </ngx-datatable-column>
+            <ngx-datatable-column [name]="'FileExplorer::Directory' | abpLocalization" prop="directoryId"
+              [sortable]="false" [flexGrow]="1">
+              <ng-template let-row="row" let-value="value" ngx-datatable-cell-template>
+                {{ value|getDirectoryName:fileGroupList }}
+              </ng-template>
+            </ngx-datatable-column>
+            <ngx-datatable-column [name]="'FileExplorer::CreationTime' | abpLocalization" prop="creationTime"
+              [flexGrow]="2">
+              <ng-template let-row="row" let-value="value" ngx-datatable-cell-template>
+                {{ value | date : 'YYYY/MM/dd HH:mm:s' }}
+              </ng-template>
+            </ngx-datatable-column>
+            <ngx-datatable-column [flexGrow]="1" [sortable]="false">
+              <ng-template let-row="row" let-value="value" ngx-datatable-cell-template>
+                <button class="btn btn-sm btn-light p-0" (click.stop)="deleteFile(row)">
+                  <i class="fas fa-trash text-primary p-2"></i>
+                </button>
+              </ng-template>
+            </ngx-datatable-column>
+          </ngx-datatable>
+        </div>
+        <div *ngIf="uploadPictureStatusList.length > 0"
+          class="position-fixed bottom-0 end-0 shadow-lg file-status-modal   m-5" style="border-radius: 10px">
+          <div class="card p-1">
+            <div class="card-header d-flex align-items-center justify-content-between p-0 py-1 border-bottom">
+              <div>{{'FileExplorer::UploadFiles' | abpLocalization}}</div>
+              <button type="button" class="btn-close" aria-label="Close" (click.stop)="closeFileStatusModal()"></button>
+            </div>
+            <div class="card-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{'FileExplorer::FileName' | abpLocalization}}</th>
+                    <th scope="col">{{'FileExplorer::FileSize' | abpLocalization}}</th>
+                    <th scope="col"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngFor="let item of uploadPictureStatusList; let i = index">
+                    <tr>
+                      <th scope="row">
+                        <div>{{ item.name }}</div>
+                        <div class="form-text text-danger" *ngIf="item.size > sizeLimit">
+                          {{'FileExplorer::ExceedsMaximumSize' |
+                          abpLocalization:(sizeLimit|formatFileSize)}}
+                        </div>
+                      </th>
+                      <td>{{ item.size | formatFileSize }}</td>
+                      <td>
+                        <i *ngIf="item.status === 1" class="fas fa-check text-primary"></i>
+                        <i *ngIf="item.status === 2" class="fas fa-times-circle text-danger"></i>
+                      </td>
+                    </tr>
+                  </ng-container>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+  <ng-template #abpFooter>
+    <button type="button" class="btn btn-secondary" abpClose>{{'AbpUi::Close' | abpLocalization}}</button>
+    <abp-button iconClass="fa fa-check" (click)="modalSave()">{{'FileExplorer::Confirm' | abpLocalization}}
+      @if(selectedTable.length>0){
+      ({{selectedTable.length}})
+      }
+    </abp-button>
+  </ng-template>
+</abp-modal>
