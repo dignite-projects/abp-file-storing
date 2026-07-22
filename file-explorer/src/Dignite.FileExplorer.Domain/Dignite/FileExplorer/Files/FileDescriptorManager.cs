@@ -68,27 +68,7 @@ public class FileDescriptorManager : DomainService
         [CanBeNull] Guid? directoryId,
         [CanBeNull] string entityId)
     {
-        var configuration = _blobContainerConfigurationProvider.Get(containerName);
-        var fileGrid = configuration.GetFileGridConfiguration();
-        var fileCells = fileGrid.FileCells;
-
-        if ((fileCells == null || !fileCells.Any()) && !cellName.IsNullOrEmpty())
-        {
-            throw new FileCellNameNotApplicableException();
-        }
-
-        if (fileCells != null && fileCells.Any())
-        {
-            if (cellName.IsNullOrEmpty())
-            {
-                throw new ArgumentNullException(nameof(cellName));
-            }
-
-            if (!fileCells.Any(c => c.Name.Equals(cellName, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                throw new FileCellNameNotFoundException();
-            }
-        }
+        ValidateFileCell(containerName, cellName);
 
         var blobName = await GenerateBlobNameAsync(containerName);
         var fileDescriptor = new FileDescriptor(
@@ -123,8 +103,7 @@ public class FileDescriptorManager : DomainService
         bool overrideExisting = false,
         CancellationToken cancellationToken = default)
     {
-        _containerNameValidator.Validate(file.ContainerName);
-        await CheckFileAsync(file);
+        await ValidateAsync(file);
 
         await OnCreatingEntityAsync(file);
 
@@ -155,6 +134,13 @@ public class FileDescriptorManager : DomainService
         await OnCreatedEntityAsync(file);
 
         return file;
+    }
+
+    public virtual async Task ValidateAsync([NotNull] FileDescriptor file)
+    {
+        _containerNameValidator.Validate(file.ContainerName);
+        ValidateFileCell(file.ContainerName, file.CellName);
+        await CheckFileAsync(file);
     }
 
     public virtual async Task<FileDescriptor> GetOrNullAsync(
@@ -253,6 +239,32 @@ public class FileDescriptorManager : DomainService
         Check.Length(file.MimeType, nameof(FileDescriptor.MimeType), FileConsts.MaxMimeTypeLength);
 
         return Task.CompletedTask;
+    }
+
+    private void ValidateFileCell(string containerName, string cellName)
+    {
+        var fileCells = _blobContainerConfigurationProvider
+            .Get(containerName)
+            .GetFileGridConfiguration()
+            .FileCells;
+
+        if ((fileCells == null || !fileCells.Any()) && !cellName.IsNullOrEmpty())
+        {
+            throw new FileCellNameNotApplicableException();
+        }
+
+        if (fileCells != null && fileCells.Any())
+        {
+            if (cellName.IsNullOrEmpty())
+            {
+                throw new ArgumentNullException(nameof(cellName));
+            }
+
+            if (!fileCells.Any(c => c.Name.Equals(cellName, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                throw new FileCellNameNotFoundException();
+            }
+        }
     }
 
     protected virtual string GetEntityKey(IEntity entity)
