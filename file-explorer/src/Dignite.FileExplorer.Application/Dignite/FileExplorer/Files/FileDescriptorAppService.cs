@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Dignite.Abp.FileStoring;
+using Dignite.FileExplorer.Directories;
 using Dignite.FileExplorer.Permissions;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
@@ -12,12 +13,14 @@ using Volo.Abp.Application.Services;
 using Volo.Abp.BlobStoring;
 using Volo.Abp.Content;
 using Volo.Abp.Imaging;
+using Volo.Abp;
 
 namespace Dignite.FileExplorer.Files;
 
 public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppService
 {
     private readonly IFileDescriptorRepository _fileRepository;
+    private readonly IDirectoryDescriptorRepository _directoryRepository;
     private readonly FileDescriptorManager _fileManager;
     private readonly IBlobContainerFactory _blobContainerFactory;
     private readonly IBlobContainerConfigurationProvider _blobContainerConfigurationProvider;
@@ -25,12 +28,14 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
 
     public FileDescriptorAppService(
         IFileDescriptorRepository blobRepository,
+        IDirectoryDescriptorRepository directoryRepository,
         FileDescriptorManager fileManager,
         IBlobContainerFactory blobContainerFactory,
         IBlobContainerConfigurationProvider blobContainerConfigurationProvider,
         IImageResizer imageResizer)
     {
         _fileRepository = blobRepository;
+        _directoryRepository = directoryRepository;
         _fileManager = fileManager;
         _blobContainerFactory = blobContainerFactory;
         _blobContainerConfigurationProvider = blobContainerConfigurationProvider;
@@ -53,10 +58,37 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     public async Task<FileDescriptorDto> UpdateAsync(Guid id, UpdateFileInput input)
     {
         var entity = await _fileRepository.GetAsync(id);
-        entity.DirectoryId= input.DirectoryId;
-        entity.Name = input.Name;
-        entity.CellName = input.CellName;
+
+        if (input.DirectoryId.HasValue)
+        {
+            entity.DirectoryId = input.DirectoryId;
+        }
+
+        if (input.Name != null)
+        {
+            entity.Name = input.Name;
+        }
+
+        if (input.CellName != null)
+        {
+            entity.CellName = input.CellName;
+        }
+
         await AuthorizationService.CheckAsync(entity, CommonOperations.Update);
+
+        if (entity.DirectoryId.HasValue)
+        {
+            var directory = await _directoryRepository.FindAsync(entity.DirectoryId.Value, false);
+            if (directory == null ||
+                !directory.ContainerName.Equals(entity.ContainerName, StringComparison.CurrentCultureIgnoreCase) ||
+                directory.CreatorId != entity.CreatorId ||
+                directory.TenantId != entity.TenantId)
+            {
+                throw new BusinessException(FileExplorerErrorCodes.Directories.DirectoryNotExist);
+            }
+        }
+
+        await _fileManager.ValidateAsync(entity);
         await _fileRepository.UpdateAsync(entity);
         return ObjectMapper.Map<FileDescriptor, FileDescriptorDto>(entity);
     }
