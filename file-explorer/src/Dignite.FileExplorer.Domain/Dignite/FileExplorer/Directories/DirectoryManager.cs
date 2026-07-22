@@ -23,6 +23,18 @@ public class DirectoryManager : DomainService
     {
         ContainerNameValidator.Validate(containerName);
 
+        if (parentId.HasValue)
+        {
+            var parent = await DirectoryDescriptorRepository.FindAsync(parentId.Value, false);
+            if (parent == null ||
+                !parent.ContainerName.Equals(containerName, StringComparison.OrdinalIgnoreCase) ||
+                parent.TenantId != CurrentTenant.Id ||
+                parent.CreatorId != userId)
+            {
+                throw new BusinessException(FileExplorerErrorCodes.Directories.DirectoryNotExist);
+            }
+        }
+
         //
         if (await DirectoryDescriptorRepository.NameExistsAsync(userId, containerName, name, parentId))
         {

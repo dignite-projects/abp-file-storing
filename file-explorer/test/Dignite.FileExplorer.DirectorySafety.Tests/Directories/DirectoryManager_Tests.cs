@@ -43,6 +43,39 @@ public class DirectoryManager_Tests
         exception.Code.ShouldBe(FileExplorerErrorCodes.Directories.ForbidMovingToChild);
     }
 
+    [Fact]
+    public async Task CreateAsync_ShouldRejectMissingParent()
+    {
+        var parentId = Guid.NewGuid();
+        var repository = Substitute.For<IDirectoryDescriptorRepository>();
+        repository.FindAsync(parentId, false).Returns((DirectoryDescriptor)null);
+        var manager = new DirectoryManager(repository, new ContainerNameValidator());
+
+        var exception = await Should.ThrowAsync<BusinessException>(() =>
+            manager.CreateAsync(Guid.NewGuid(), "Default", "child", parentId));
+
+        exception.Code.ShouldBe(FileExplorerErrorCodes.Directories.DirectoryNotExist);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldRejectParentFromAnotherOwnerOrContainer()
+    {
+        var userId = Guid.NewGuid();
+        var parentId = Guid.NewGuid();
+        var parent = new DirectoryDescriptor(parentId, "Other", "parent", null, 0, null)
+        {
+            CreatorId = Guid.NewGuid()
+        };
+        var repository = Substitute.For<IDirectoryDescriptorRepository>();
+        repository.FindAsync(parentId, false).Returns(parent);
+        var manager = new DirectoryManager(repository, new ContainerNameValidator());
+
+        var exception = await Should.ThrowAsync<BusinessException>(() =>
+            manager.CreateAsync(userId, "Default", "child", parentId));
+
+        exception.Code.ShouldBe(FileExplorerErrorCodes.Directories.DirectoryNotExist);
+    }
+
     private static DirectoryDescriptor CreateDirectory(Guid id, Guid? parentId)
     {
         return new DirectoryDescriptor(id, "Default", id.ToString(), parentId, 0, null)
