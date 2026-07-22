@@ -3,7 +3,8 @@
         <LangVersion>latest</LangVersion>
         <Version>1.0.0</Version>
         <NoWarn>$(NoWarn);CS1591</NoWarn>
-        <NuGetAudit>false</NuGetAudit>
+        <NuGetAudit>true</NuGetAudit>
+        <NuGetAuditLevel>low</NuGetAuditLevel>
         <AbpProjectType>app-nolayer</AbpProjectType>
         <!-- The repo root's Directory.Packages.props enables central package management for the
              library packages; this app-nolayer host project still pins its own inline versions. -->
