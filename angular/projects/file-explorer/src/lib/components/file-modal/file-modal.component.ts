@@ -207,7 +207,7 @@ export class FileModalComponent implements OnChanges {
           .then(res => {
             this.setuploadPictureStatus(file, 1);
           })
-          .catch(function (err) {
+          .catch(err => {
             this.setuploadPictureStatus(file, 2);
             return err;
           }), // 保证所有Promise都resolve
