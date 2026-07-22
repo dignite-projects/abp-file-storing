@@ -1,5 +1,5 @@
 /* eslint-disable @angular-eslint/component-selector */
-import { Component, Input } from '@angular/core';
+import { AfterContentInit, Component, Input } from '@angular/core';
 
 @Component({
   
@@ -7,7 +7,7 @@ import { Component, Input } from '@angular/core';
   templateUrl: './file-explorer-view.component.html',
   styleUrl: './file-explorer-view.component.scss',
 })
-export class FileExplorerViewComponent {
+export class FileExplorerViewComponent implements AfterContentInit {
   /**展示则内容 */
   showValue: any = '';
 

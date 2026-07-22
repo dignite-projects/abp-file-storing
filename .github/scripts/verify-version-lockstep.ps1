@@ -12,7 +12,7 @@ if (-not $versionMatch.Success) {
 }
 
 $dotnetVersion = $versionMatch.Groups[1].Value
-$angularPackage = Get-Content -Raw (Join-Path $repositoryRoot 'angular\projects\notification-center\package.json') |
+$angularPackage = Get-Content -Raw (Join-Path $repositoryRoot 'angular\projects\file-explorer\package.json') |
     ConvertFrom-Json
 
 if ($angularPackage.version -ne $dotnetVersion) {

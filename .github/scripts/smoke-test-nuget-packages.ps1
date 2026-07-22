@@ -10,21 +10,16 @@ $ErrorActionPreference = 'Stop'
 
 $artifacts = (Resolve-Path -LiteralPath $ArtifactsPath).Path
 $packageIds = @(
-    'Dignite.Abp.Notifications.Abstractions',
-    'Dignite.Abp.Notifications',
-    'Dignite.Abp.Notifications.Emailing',
-    'Dignite.Abp.Notifications.Emailing.Identity',
-    'Dignite.Abp.Notifications.Identity',
-    'Dignite.Abp.Notifications.SignalR',
-    'Dignite.Abp.NotificationCenter.Domain.Shared',
-    'Dignite.Abp.NotificationCenter.Domain',
-    'Dignite.Abp.NotificationCenter.Application.Contracts',
-    'Dignite.Abp.NotificationCenter.Application',
-    'Dignite.Abp.NotificationCenter.HttpApi',
-    'Dignite.Abp.NotificationCenter.HttpApi.Client',
-    'Dignite.Abp.NotificationCenter.EntityFrameworkCore',
-    'Dignite.Abp.NotificationCenter.MongoDB',
-    'Dignite.Abp.NotificationCenter.Web'
+    'Dignite.Abp.FileStoring',
+    'Dignite.Abp.FileStoring.Imaging',
+    'Dignite.FileExplorer.Domain.Shared',
+    'Dignite.FileExplorer.Domain',
+    'Dignite.FileExplorer.Application.Contracts',
+    'Dignite.FileExplorer.Application',
+    'Dignite.FileExplorer.EntityFrameworkCore',
+    'Dignite.FileExplorer.MongoDB',
+    'Dignite.FileExplorer.HttpApi',
+    'Dignite.FileExplorer.HttpApi.Client'
 )
 
 foreach ($packageId in $packageIds) {
@@ -34,7 +29,7 @@ foreach ($packageId in $packageIds) {
     }
 }
 
-$tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) "dignite-notifications-nuget-smoke-$([Guid]::NewGuid().ToString('N'))"
+$tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) "dignite-file-storing-nuget-smoke-$([Guid]::NewGuid().ToString('N'))"
 $projectPath = Join-Path $tempRoot 'PackageSmoke.csproj'
 $sourcePath = Join-Path $tempRoot 'PackageSmoke.cs'
 $nuGetConfigPath = Join-Path $tempRoot 'NuGet.Config'
@@ -68,21 +63,16 @@ public static class PackageSurface
 {
     public static readonly Type[] ModuleTypes =
     [
-        typeof(Dignite.Abp.Notifications.AbpNotificationsAbstractionsModule),
-        typeof(Dignite.Abp.Notifications.AbpNotificationsModule),
-        typeof(Dignite.Abp.Notifications.Emailing.AbpNotificationsEmailingModule),
-        typeof(Dignite.Abp.Notifications.Emailing.Identity.AbpNotificationsEmailingIdentityModule),
-        typeof(Dignite.Abp.Notifications.Identity.AbpNotificationsIdentityModule),
-        typeof(Dignite.Abp.Notifications.SignalR.AbpNotificationsSignalRModule),
-        typeof(Dignite.Abp.NotificationCenter.AbpNotificationCenterDomainSharedModule),
-        typeof(Dignite.Abp.NotificationCenter.AbpNotificationCenterDomainModule),
-        typeof(Dignite.Abp.NotificationCenter.AbpNotificationCenterApplicationContractsModule),
-        typeof(Dignite.Abp.NotificationCenter.AbpNotificationCenterApplicationModule),
-        typeof(Dignite.Abp.NotificationCenter.AbpNotificationCenterHttpApiModule),
-        typeof(Dignite.Abp.NotificationCenter.AbpNotificationCenterHttpApiClientModule),
-        typeof(Dignite.Abp.NotificationCenter.EntityFrameworkCore.AbpNotificationCenterEntityFrameworkCoreModule),
-        typeof(Dignite.Abp.NotificationCenter.MongoDB.AbpNotificationCenterMongoDbModule),
-        typeof(Dignite.Abp.NotificationCenter.Web.AbpNotificationCenterWebModule)
+        typeof(Dignite.Abp.FileStoring.DigniteAbpFileStoringModule),
+        typeof(Dignite.Abp.FileStoring.Imaging.DigniteAbpFileStoringImagingModule),
+        typeof(Dignite.FileExplorer.FileExplorerDomainSharedModule),
+        typeof(Dignite.FileExplorer.FileExplorerDomainModule),
+        typeof(Dignite.FileExplorer.FileExplorerApplicationContractsModule),
+        typeof(Dignite.FileExplorer.FileExplorerApplicationModule),
+        typeof(Dignite.FileExplorer.EntityFrameworkCore.FileExplorerEntityFrameworkCoreModule),
+        typeof(Dignite.FileExplorer.MongoDB.FileExplorerMongoDbModule),
+        typeof(Dignite.FileExplorer.FileExplorerHttpApiModule),
+        typeof(Dignite.FileExplorer.FileExplorerHttpApiClientModule)
     ];
 }
 '@

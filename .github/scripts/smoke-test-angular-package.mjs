@@ -20,7 +20,7 @@ const repositoryRoot = resolve(scriptDirectory, '..', '..');
 const workspacePackage = JSON.parse(
   readFileSync(join(repositoryRoot, 'angular', 'package.json'), 'utf8'),
 );
-const tempRoot = mkdtempSync(join(tmpdir(), 'dignite-notifications-angular-smoke-'));
+const tempRoot = mkdtempSync(join(tmpdir(), 'dignite-file-explorer-angular-smoke-'));
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
@@ -42,12 +42,12 @@ try {
     join(tempRoot, 'package.json'),
     `${JSON.stringify(
       {
-        name: 'dignite-notification-center-package-smoke',
+        name: 'dignite-file-explorer-package-smoke',
         private: true,
         version: '0.0.0',
         dependencies: {
           ...workspacePackage.dependencies,
-          '@dignite/abp.ng.notification-center': pathToFileURL(tarballPath).href,
+          '@dignite-ng/expand.file-explorer': pathToFileURL(tarballPath).href,
         },
         devDependencies: {
           typescript: workspacePackage.devDependencies.typescript,
@@ -80,23 +80,17 @@ try {
   writeFileSync(
     join(tempRoot, 'smoke.ts'),
     `import {
-  NotificationBellComponent,
-  NotificationSubscriptionsComponent,
-  UserNotificationService,
-  NotificationSubscriptionService,
-} from '@dignite/abp.ng.notification-center';
+  FileExplorerModule,
+} from '@dignite-ng/expand.file-explorer';
 import {
-  eNotificationCenterRouteNames,
-  provideNotificationCenterConfig,
-} from '@dignite/abp.ng.notification-center/config';
+  eFileRouteNames,
+  FileConfigModule,
+} from '@dignite-ng/expand.file-explorer/config';
 
 export const packageSurface = {
-  NotificationBellComponent,
-  NotificationSubscriptionsComponent,
-  UserNotificationService,
-  NotificationSubscriptionService,
-  provideNotificationCenterConfig,
-  notificationsRoute: eNotificationCenterRouteNames.Notifications,
+  FileExplorerModule,
+  FileConfigModule,
+  fileUploadDemoRoute: eFileRouteNames.FileUploadDemo,
 };
 `,
   );
@@ -112,8 +106,8 @@ export const packageSurface = {
   const installedPackageJsonPath = join(
     tempRoot,
     'node_modules',
-    '@dignite',
-    'abp.ng.notification-center',
+    '@dignite-ng',
+    'expand.file-explorer',
     'package.json',
   );
   const installedPackage = JSON.parse(readFileSync(installedPackageJsonPath, 'utf8'));
