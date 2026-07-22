@@ -381,7 +381,19 @@ public class HostModule : AbpModule
 
     private void ConfigureDataProtection(ServiceConfigurationContext context)
     {
-        context.Services.AddDataProtection().SetApplicationName("Host");
+        var configuration = context.Services.GetConfiguration();
+        var keysPath = configuration["DataProtection:KeysPath"];
+        if (string.IsNullOrWhiteSpace(keysPath))
+        {
+            keysPath = Path.Combine(AppContext.BaseDirectory, "data-protection-keys");
+        }
+
+        Directory.CreateDirectory(keysPath);
+
+        context.Services
+            .AddDataProtection()
+            .SetApplicationName("Host")
+            .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
     }
 
     private void ConfigureVirtualFiles(IWebHostEnvironment hostingEnvironment)

@@ -22,3 +22,5 @@ Identity:AdminPassword
 ```
 
 For a first-run Development database, `Identity:AdminPassword` is optional and ABP's development password is used; set the value explicitly before sharing the environment. Non-Development database migration requires `Identity:AdminPassword` and fails when it is missing. For Docker or other deployments, use the corresponding double-underscore environment variable names (for example, `AuthServer__CertificatePassPhrase`).
+
+Data Protection keys are persisted under `DataProtection:KeysPath` (default: `data-protection-keys`). The Docker compose deployment mounts this directory to the durable `host_data_protection_keys` volume. In a multi-instance deployment, point `DataProtection:KeysPath` at a shared durable filesystem available to every API instance.

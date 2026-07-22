@@ -41,6 +41,7 @@ services:
     volumes:
       - sqlite_data:/data
       - ./certs:/app/certs
+      - data_protection_keys:/app/data-protection-keys
     networks:
       - abp-network  
   
@@ -79,6 +80,8 @@ services:
 volumes:
   sqlite_data:
     name: host_sqlite_data
+  data_protection_keys:
+    name: host_data_protection_keys
 networks:
   abp-network:
     name: host-network
