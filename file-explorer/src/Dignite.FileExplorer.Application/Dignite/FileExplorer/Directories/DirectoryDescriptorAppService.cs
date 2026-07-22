@@ -20,8 +20,19 @@ public class DirectoryDescriptorAppService : FileExplorerAppService, IDirectoryD
     [Authorize]
     public async Task<DirectoryDescriptorDto> CreateAsync(CreateDirectoryInput input)
     {
+        var resource = new DirectoryDescriptor(
+            GuidGenerator.Create(),
+            input.ContainerName,
+            input.Name,
+            input.ParentId,
+            0,
+            CurrentTenant.Id)
+        {
+            CreatorId = CurrentUser.Id
+        };
+        await AuthorizationService.CheckAsync(resource, CommonOperations.Create);
+
         var entity = await _directoryManager.CreateAsync(CurrentUser.Id.Value, input.ContainerName, input.Name, input.ParentId);
-        await AuthorizationService.CheckAsync(entity, CommonOperations.Create);
         return ObjectMapper.Map<DirectoryDescriptor, DirectoryDescriptorDto>(entity);
     }
 
