@@ -40,6 +40,7 @@ export class FileDescriptorService {
   download = (containerName: string, blobName: string, fileName: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, FileResult>({
       method: 'GET',
+      responseType: 'blob',
       url: `/api/file-explorer/files/download/${containerName}/${blobName}`,
       params: { fileName },
     },
@@ -84,7 +85,7 @@ export class FileDescriptorService {
       method: 'GET',
       responseType: 'blob',
       url: `/api/file-explorer/files/${containerName}/${blobName}`,
-      params: { width: imageResize.width, height: imageResize.height },
+      params: { width: imageResize?.width, height: imageResize?.height },
     },
     { apiName: this.apiName,...config });
   
