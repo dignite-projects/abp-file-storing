@@ -42,7 +42,6 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     {
         // Build a temporary file for authorization verification
         var tempFileDescriptor = new FileDescriptor(Guid.NewGuid(), input.ContainerName, string.Empty, string.Empty, string.Empty, input.CellName, input.DirectoryId, input.EntityId, CurrentTenant.Id);
-        tempFileDescriptor.CreatorId = CurrentUser.Id;
         await AuthorizationService.CheckAsync(tempFileDescriptor, CommonOperations.Create);
 
         // formal start of file creation
@@ -81,6 +80,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         var result = await _fileRepository.GetListAsync(containerName, creatorId, null, null, entityId);
         foreach (var file in result)
         {
+            await AuthorizationService.CheckAsync(file, CommonOperations.Delete);
             await _fileManager.DeleteAsync(file);
         }
     }
