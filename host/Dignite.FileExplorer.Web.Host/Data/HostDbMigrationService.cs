@@ -170,7 +170,19 @@ public class HostDbMigrationService : ITransientDependency
 
         try
         {
-            Process.Start(procStartInfo);
+            using var process = Process.Start(procStartInfo);
+
+            if (process == null)
+            {
+                throw new Exception("Couldn't start ABP CLI...");
+            }
+
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                throw new Exception($"ABP CLI exited with code {process.ExitCode}.");
+            }
         }
         catch (Exception)
         {
@@ -187,7 +199,7 @@ public class HostDbMigrationService : ITransientDependency
             throw new Exception("Solution folder not found!");
         }
 
-        return Path.Combine(slnDirectoryPath, "Dignite.FileExplorer.Web.Host");
+        return Path.Combine(slnDirectoryPath, "host", "Dignite.FileExplorer.Web.Host");
     }
 
     private string GetSolutionDirectoryPath()
