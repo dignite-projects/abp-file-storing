@@ -52,6 +52,18 @@ public class FileStoringHandler_Tests
         stream.Position.ShouldBe(0);
     }
 
+    [Fact]
+    public void Sha256_Should_Reset_Stream_Position()
+    {
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes("abc"));
+        stream.Position = 0;
+
+        var sha256 = stream.Sha256();
+
+        sha256.ShouldBe("BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD");
+        stream.Position.ShouldBe(0);
+    }
+
     [Theory]
     [InlineData("image/jpeg", true)]
     [InlineData("image/webp", true)]

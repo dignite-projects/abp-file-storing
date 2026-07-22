@@ -112,33 +112,93 @@ public class FileDescriptorManager : DomainService
 
         await OnCreatingEntityAsync(file);
 
-        if (overrideExisting)
-        {
-            var existingFile = await _fileDescriptorRepository.FindByBlobNameAsync(file.ContainerName, file.BlobName, cancellationToken);
-            if (existingFile != null)
-            {
-                await DeleteAsync(existingFile, cancellationToken);
-            }
-        }
-        else if (await _fileDescriptorRepository.BlobNameExistsAsync(file.ContainerName, file.BlobName, cancellationToken))
+        var existingFile = overrideExisting
+            ? await _fileDescriptorRepository.FindByBlobNameAsync(file.ContainerName, file.BlobName, cancellationToken)
+            : null;
+
+        if (!overrideExisting && await _fileDescriptorRepository.BlobNameExistsAsync(file.ContainerName, file.BlobName, cancellationToken))
         {
             throw new BlobAlreadyExistsException(
                 $"Saving BLOB '{file.BlobName}' does already exists in the container '{file.ContainerName}'! Set {nameof(overrideExisting)} if it should be overwritten.");
         }
 
-        stream = await FileHandlers(file, stream);
+        var previousFile = existingFile == null ? null : CopyFileDescriptor(existingFile);
+        var previousBlobName = existingFile == null ? null : GetActualBlobName(existingFile);
+        MemoryStream previousBlob = null;
+        var metadataDeleteAttempted = false;
+        var metadataDeleted = false;
+        var metadataInserted = false;
+        var blobSaveAttempted = false;
 
-        file = await SaveFileInformationAsync(file, stream, cancellationToken);
-
-        if (file.ReferBlobName.IsNullOrEmpty())
+        try
         {
-            var blobContainer = _blobContainerFactory.Create(file.ContainerName);
-            await blobContainer.SaveAsync(file.BlobName, stream, overrideExisting, cancellationToken);
+            if (previousBlobName != null)
+            {
+                previousBlob = await BackupBlobAsync(file.ContainerName, previousBlobName, cancellationToken);
+            }
+
+            stream = await FileHandlers(file, stream);
+            if (stream.CanSeek)
+            {
+                stream.Position = 0;
+            }
+
+            file = await PrepareFileInformationAsync(file, stream, cancellationToken);
+
+            if (file.ReferBlobName.IsNullOrEmpty())
+            {
+                var blobContainer = _blobContainerFactory.Create(file.ContainerName);
+                blobSaveAttempted = true;
+                await blobContainer.SaveAsync(file.BlobName, stream, true, cancellationToken);
+            }
+
+            if (existingFile != null)
+            {
+                metadataDeleteAttempted = true;
+                await _fileDescriptorRepository.DeleteAsync(existingFile, true, cancellationToken);
+                metadataDeleted = true;
+            }
+
+            await _fileDescriptorRepository.InsertAsync(file, true, cancellationToken);
+            metadataInserted = true;
+
+            await OnCreatedEntityAsync(file);
+
+            if (previousBlobName != null && previousBlobName != GetActualBlobName(file))
+            {
+                await DeleteBlobIfUnusedAsync(file.ContainerName, previousBlobName, cancellationToken);
+            }
+
+            return file;
         }
+        catch
+        {
+            if (metadataInserted)
+            {
+                await TryDeleteMetadataAsync(file, cancellationToken);
+            }
 
-        await OnCreatedEntityAsync(file);
+            if (blobSaveAttempted)
+            {
+                await TryDeleteBlobAsync(file.ContainerName, file.BlobName, cancellationToken);
+            }
 
-        return file;
+            if ((metadataDeleteAttempted || metadataDeleted) && previousFile != null)
+            {
+                await TryRestoreMetadataAsync(previousFile, cancellationToken);
+            }
+
+            if (previousBlob != null && previousBlobName != null)
+            {
+                await TryRestoreBlobAsync(file.ContainerName, previousBlobName, previousBlob, cancellationToken);
+            }
+
+            throw;
+        }
+        finally
+        {
+            previousBlob?.Dispose();
+        }
     }
 
     public virtual async Task ValidateAsync([NotNull] FileDescriptor file)
@@ -338,27 +398,142 @@ public class FileDescriptorManager : DomainService
         return stream;
     }
 
-    private async Task<FileDescriptor> SaveFileInformationAsync(
+    private async Task<FileDescriptor> PrepareFileInformationAsync(
         [NotNull] FileDescriptor file,
         Stream stream,
         CancellationToken cancellationToken = default)
     {
-        var md5 = stream.Md5();
-        var md5ExistingFile = await _fileDescriptorRepository.FindByMd5Async(file.ContainerName, md5, cancellationToken);
-        if (md5ExistingFile == null || md5ExistingFile.BlobName == file.BlobName)
+        var contentHash = stream.Sha256();
+        var hashExistingFile = await _fileDescriptorRepository.FindByMd5Async(file.ContainerName, contentHash, cancellationToken);
+        if (hashExistingFile == null || hashExistingFile.BlobName == file.BlobName)
         {
             file.SetSize(stream.Length);
-            file.SetMd5(md5);
+            file.SetMd5(contentHash);
+            file.SetReferBlobName(string.Empty);
         }
         else
         {
-            file.SetSize(md5ExistingFile.Size);
-            file.SetReferBlobName(md5ExistingFile.BlobName);
+            file.SetSize(hashExistingFile.Size);
+            file.SetReferBlobName(GetActualBlobName(hashExistingFile));
         }
 
-        await _fileDescriptorRepository.InsertAsync(file, false, cancellationToken);
-
         return file;
+    }
+
+    private async Task<MemoryStream> BackupBlobAsync(
+        string containerName,
+        string blobName,
+        CancellationToken cancellationToken)
+    {
+        var blob = await _blobContainerFactory.Create(containerName).GetOrNullAsync(blobName, cancellationToken);
+        if (blob == null)
+        {
+            return null;
+        }
+
+        using (blob)
+        {
+            var backup = new MemoryStream();
+            await blob.CopyToAsync(backup, cancellationToken);
+            backup.Position = 0;
+            return backup;
+        }
+    }
+
+    private async Task DeleteBlobIfUnusedAsync(
+        string containerName,
+        string blobName,
+        CancellationToken cancellationToken)
+    {
+        if (await _fileDescriptorRepository.ReferencingAnyAsync(containerName, blobName, cancellationToken) ||
+            await _fileDescriptorRepository.FindByBlobNameAsync(containerName, blobName, cancellationToken) != null)
+        {
+            return;
+        }
+
+        await _blobContainerFactory.Create(containerName).DeleteAsync(blobName, cancellationToken);
+    }
+
+    private async Task TryDeleteMetadataAsync(FileDescriptor file, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _fileDescriptorRepository.DeleteAsync(file, true, cancellationToken);
+        }
+        catch
+        {
+            // Best-effort compensation must not hide the original exception.
+        }
+    }
+
+    private async Task TryDeleteBlobAsync(string containerName, string blobName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _blobContainerFactory.Create(containerName).DeleteAsync(blobName, cancellationToken);
+        }
+        catch
+        {
+            // Best-effort compensation must not hide the original exception.
+        }
+    }
+
+    private async Task TryRestoreMetadataAsync(FileDescriptor file, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _fileDescriptorRepository.InsertAsync(file, true, cancellationToken);
+        }
+        catch
+        {
+            // Best-effort compensation must not hide the original exception.
+        }
+    }
+
+    private async Task TryRestoreBlobAsync(
+        string containerName,
+        string blobName,
+        MemoryStream backup,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            backup.Position = 0;
+            await _blobContainerFactory.Create(containerName).SaveAsync(blobName, backup, true, cancellationToken);
+        }
+        catch
+        {
+            // Best-effort compensation must not hide the original exception.
+        }
+    }
+
+    private static string GetActualBlobName(FileDescriptor file)
+    {
+        return file.ReferBlobName.IsNullOrEmpty() ? file.BlobName : file.ReferBlobName;
+    }
+
+    private static FileDescriptor CopyFileDescriptor(FileDescriptor file)
+    {
+        var copy = new FileDescriptor(
+            file.Id,
+            file.ContainerName,
+            file.BlobName,
+            file.Name,
+            file.MimeType,
+            file.CellName,
+            file.DirectoryId,
+            file.EntityId,
+            file.TenantId);
+
+        copy.SetSize(file.Size);
+        copy.SetMd5(file.Md5);
+        copy.SetReferBlobName(file.ReferBlobName);
+        copy.CreationTime = file.CreationTime;
+        copy.CreatorId = file.CreatorId;
+        copy.DeleterId = file.DeleterId;
+        copy.DeletionTime = file.DeletionTime;
+        copy.IsDeleted = file.IsDeleted;
+        return copy;
     }
 
     private async Task<string> GenerateBlobNameAsync(string containerName)
