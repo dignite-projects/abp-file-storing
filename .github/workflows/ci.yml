@@ -41,28 +41,47 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Restore
-        run: dotnet restore Dignite.Abp.Notifications.slnx
+        run: dotnet restore Dignite.Abp.FileStoring.slnx
 
+      # Includes host/Dignite.FileExplorer.Web.Host (the local dev/demo host) - it opts out of
+      # central package management in common.props since it pins its own inline package versions.
       - name: Build
-        run: dotnet build Dignite.Abp.Notifications.slnx --no-restore --configuration Release
+        run: dotnet build Dignite.Abp.FileStoring.slnx --no-restore --configuration Release
 
-      # Dignite.Abp.NotificationCenter.TestBase is IsTestProject=false (shared scenarios, no
-      # runner) - it is exercised indirectly via the two projects below, never run directly.
-      - name: Run Notifications (core) tests
-        run: dotnet test core/test/Dignite.Abp.Notifications.Tests/Dignite.Abp.Notifications.Tests.csproj --no-build --configuration Release --verbosity normal
+      - name: Run FileStoring (core) tests
+        run: dotnet test core/test/Dignite.Abp.FileStoring.Tests/Dignite.Abp.FileStoring.Tests.csproj --no-build --configuration Release --verbosity normal
 
-      # EF Core provider - runs against in-memory Sqlite, no external database dependency.
-      - name: Run NotificationCenter (EF Core) tests
-        run: dotnet test notification-center/test/Dignite.Abp.NotificationCenter.Tests/Dignite.Abp.NotificationCenter.Tests.csproj --no-build --configuration Release --verbosity normal
+      - name: Run FileStoring Imaging (core) tests
+        run: dotnet test core/test/Dignite.Abp.FileStoring.Imaging.Tests/Dignite.Abp.FileStoring.Imaging.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      # Dignite.FileExplorer.TestBase is shared test infrastructure (no runner) - it is exercised
+      # indirectly via the projects below, never run directly.
+      - name: Run FileExplorer (domain) tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.Domain.Tests/Dignite.FileExplorer.Domain.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run FileExplorer (EF Core) tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.EntityFrameworkCore.Tests/Dignite.FileExplorer.EntityFrameworkCore.Tests.csproj --no-build --configuration Release --verbosity normal
 
       # MongoDB provider - starts an embedded mongod via MongoSandbox (MongoSandbox8.runtime.linux-x64
       # is pinned in Directory.Packages.props and resolves fine on this runner); no external
       # MongoDB install needed.
-      - name: Run NotificationCenter (MongoDB) tests
-        run: dotnet test notification-center/test/Dignite.Abp.NotificationCenter.MongoDB.Tests/Dignite.Abp.NotificationCenter.MongoDB.Tests.csproj --no-build --configuration Release --verbosity normal
+      - name: Run FileExplorer (MongoDB) tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.MongoDB.Tests/Dignite.FileExplorer.MongoDB.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run FileExplorer (application) tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.Application.Tests/Dignite.FileExplorer.Application.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run authorization denial tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.Authorization.Tests/Dignite.FileExplorer.Authorization.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run directory safety tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.DirectorySafety.Tests/Dignite.FileExplorer.DirectorySafety.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run update authorization tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.Update.Tests/Dignite.FileExplorer.Update.Tests.csproj --no-build --configuration Release --verbosity normal
 
       - name: Pack NuGet packages
-        run: dotnet pack Dignite.Abp.Notifications.slnx --no-build --configuration Release --output ./artifacts-ci/nuget
+        run: dotnet pack Dignite.Abp.FileStoring.slnx --no-build --configuration Release --output ./artifacts-ci/nuget
 
       - name: Smoke-test packed NuGet packages
         shell: pwsh
@@ -70,7 +89,19 @@ jobs:
 
       - name: Install Angular dependencies
         working-directory: angular
-        run: npm ci
+        run: npm ci --legacy-peer-deps
+
+      - name: Audit Angular dependencies
+        working-directory: angular
+        run: npm audit --audit-level=high
+
+      - name: Lint Angular projects
+        working-directory: angular
+        run: npm run lint -- --max-warnings=0
+
+      - name: Run Angular unit tests
+        working-directory: angular
+        run: npm test -- --watch=false
 
       - name: Build Angular library
         working-directory: angular
@@ -85,7 +116,7 @@ jobs:
         working-directory: angular
         run: |
           New-Item -ItemType Directory -Force ../artifacts-ci/npm | Out-Null
-          npm pack ./dist/notification-center --pack-destination ../artifacts-ci/npm
+          npm pack ./dist/file-explorer --pack-destination ../artifacts-ci/npm
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Smoke-test packed Angular library

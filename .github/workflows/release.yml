@@ -71,24 +71,61 @@ jobs:
           fi
 
       - name: Restore
-        run: dotnet restore Dignite.Abp.Notifications.slnx
+        run: dotnet restore Dignite.Abp.FileStoring.slnx
 
+      - name: Block vulnerable NuGet dependencies
+        shell: bash
+        run: |
+          set -o pipefail
+          report="$(dotnet list Dignite.Abp.FileStoring.slnx package --vulnerable --include-transitive)"
+          printf '%s\n' "$report"
+          if printf '%s\n' "$report" | grep -Eiq '^\s*>\s+[^[:space:]]+\s+[^[:space:]]+\s+(high|critical)\b'; then
+            echo "::error::High or critical NuGet vulnerabilities block the release."
+            exit 1
+          fi
+
+      # Includes host/Dignite.FileExplorer.Web.Host (the local dev/demo host) - it opts out of
+      # central package management in common.props since it pins its own inline package versions.
       - name: Build
-        run: dotnet build Dignite.Abp.Notifications.slnx --no-restore --configuration Release
+        run: dotnet build Dignite.Abp.FileStoring.slnx --no-restore --configuration Release -warnaserror
 
-      - name: Run Notifications (core) tests
-        run: dotnet test core/test/Dignite.Abp.Notifications.Tests/Dignite.Abp.Notifications.Tests.csproj --no-build --configuration Release --verbosity normal
+      - name: Run FileStoring (core) tests
+        run: dotnet test core/test/Dignite.Abp.FileStoring.Tests/Dignite.Abp.FileStoring.Tests.csproj --no-build --configuration Release --verbosity normal
 
-      - name: Run NotificationCenter (EF Core) tests
-        run: dotnet test notification-center/test/Dignite.Abp.NotificationCenter.Tests/Dignite.Abp.NotificationCenter.Tests.csproj --no-build --configuration Release --verbosity normal
+      - name: Run FileStoring Imaging (core) tests
+        run: dotnet test core/test/Dignite.Abp.FileStoring.Imaging.Tests/Dignite.Abp.FileStoring.Imaging.Tests.csproj --no-build --configuration Release --verbosity normal
 
-      - name: Run NotificationCenter (MongoDB) tests
-        run: dotnet test notification-center/test/Dignite.Abp.NotificationCenter.MongoDB.Tests/Dignite.Abp.NotificationCenter.MongoDB.Tests.csproj --no-build --configuration Release --verbosity normal
+      # Dignite.FileExplorer.TestBase is shared test infrastructure (no runner) - it is exercised
+      # indirectly via the projects below, never run directly.
+      - name: Run FileExplorer (domain) tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.Domain.Tests/Dignite.FileExplorer.Domain.Tests.csproj --no-build --configuration Release --verbosity normal
 
-      # Projects with IsPackable=false (host/ and the 4 test projects) are skipped automatically.
-      # Only the 15 packable projects under core/src and notification-center/src are produced.
+      - name: Run FileExplorer (EF Core) tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.EntityFrameworkCore.Tests/Dignite.FileExplorer.EntityFrameworkCore.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      # MongoDB provider - starts an embedded mongod via MongoSandbox (MongoSandbox8.runtime.linux-x64
+      # is pinned in Directory.Packages.props and resolves fine on this runner); no external
+      # MongoDB install needed.
+      - name: Run FileExplorer (MongoDB) tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.MongoDB.Tests/Dignite.FileExplorer.MongoDB.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run FileExplorer (application) tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.Application.Tests/Dignite.FileExplorer.Application.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run authorization denial tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.Authorization.Tests/Dignite.FileExplorer.Authorization.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run directory safety tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.DirectorySafety.Tests/Dignite.FileExplorer.DirectorySafety.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run update authorization tests
+        run: dotnet test file-explorer/test/Dignite.FileExplorer.Update.Tests/Dignite.FileExplorer.Update.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      # Projects with IsPackable=false (host/Dignite.FileExplorer.Web.Host and the FileStoring
+      # test project) are skipped automatically. Only the 10 packable projects under core/src and
+      # file-explorer/src are produced.
       - name: Pack NuGet packages
-        run: dotnet pack Dignite.Abp.Notifications.slnx --no-build --configuration Release -o ./artifacts
+        run: dotnet pack Dignite.Abp.FileStoring.slnx --no-build --configuration Release -o ./artifacts
 
       - name: Smoke-test packed NuGet packages
         shell: pwsh
@@ -96,7 +133,19 @@ jobs:
 
       - name: Install Angular dependencies
         working-directory: angular
-        run: npm ci
+        run: npm ci --legacy-peer-deps
+
+      - name: Audit Angular dependencies
+        working-directory: angular
+        run: npm audit --audit-level=moderate
+
+      - name: Lint Angular projects
+        working-directory: angular
+        run: npm run lint -- --max-warnings=0
+
+      - name: Run Angular unit tests
+        working-directory: angular
+        run: npm test -- --watch=false
 
       - name: Build Angular library
         working-directory: angular
@@ -111,7 +160,7 @@ jobs:
         working-directory: angular
         run: |
           New-Item -ItemType Directory -Force ../artifacts/npm | Out-Null
-          npm pack ./dist/notification-center --pack-destination ../artifacts/npm
+          npm pack ./dist/file-explorer --pack-destination ../artifacts/npm
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Smoke-test packed Angular library
@@ -122,6 +171,36 @@ jobs:
             throw "Expected one Angular package tarball, found $($tarballs.Count)."
           }
           node ./.github/scripts/smoke-test-angular-package.mjs $tarballs[0].FullName '${{ steps.version.outputs.version }}'
+
+      - name: Migrate host database for HTTP E2E smoke test
+        run: dotnet run --project host/Dignite.FileExplorer.Web.Host/Dignite.FileExplorer.Web.Host.csproj --no-build --configuration Release -- --migrate-database
+
+      - name: Start host for HTTP E2E smoke test
+        shell: bash
+        run: |
+          nohup dotnet run --project host/Dignite.FileExplorer.Web.Host/Dignite.FileExplorer.Web.Host.csproj --no-build --configuration Release -- --urls http://127.0.0.1:5000 > host-e2e.log 2>&1 &
+          echo $! > host-e2e.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:5000/health-status > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat host-e2e.log
+          exit 1
+
+      - name: Run HTTP E2E and proxy smoke test
+        env:
+          FILE_EXPLORER_BASE_URL: http://127.0.0.1:5000
+        run: node ./.github/scripts/smoke-test-file-explorer-http.mjs
+
+      - name: Stop host after HTTP E2E smoke test
+        if: always()
+        shell: bash
+        run: |
+          if [ -f host-e2e.pid ]; then
+            kill "$(cat host-e2e.pid)" || true
+          fi
 
       - name: Upload release packages
         uses: actions/upload-artifact@v4

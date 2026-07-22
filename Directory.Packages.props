@@ -35,6 +35,7 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="Shouldly" Version="4.2.1" />
     <PackageVersion Include="NSubstitute" Version="5.1.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Proxies" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup Label="MongoDB integration-test infrastructure">

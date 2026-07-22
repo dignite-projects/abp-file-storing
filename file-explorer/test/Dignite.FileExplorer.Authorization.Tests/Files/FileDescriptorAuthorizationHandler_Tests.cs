@@ -46,6 +46,21 @@ public class FileDescriptorAuthorizationHandler_Tests
         context.HasSucceeded.ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task Get_ShouldBeDeniedWithoutGetPermission()
+    {
+        var handler = CreateHandler();
+        var resource = CreateFile();
+        var context = new AuthorizationHandlerContext(
+            new[] { CommonOperations.Get },
+            new ClaimsPrincipal(new ClaimsIdentity()),
+            resource);
+
+        await ((IAuthorizationHandler)handler).HandleAsync(context);
+
+        context.HasSucceeded.ShouldBeFalse();
+    }
+
     private static FileDescriptorAuthorizationHandler CreateHandler()
     {
         var configuration = new BlobContainerConfiguration();
@@ -53,6 +68,7 @@ public class FileDescriptorAuthorizationHandler_Tests
         {
             options.CreateFilePermissionName = "Files.Create";
             options.DeleteFilePermissionName = "Files.Delete";
+            options.GetFilePermissionName = "Files.Get";
         });
 
         var configurationProvider = Substitute.For<IBlobContainerConfigurationProvider>();
