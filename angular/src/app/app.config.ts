@@ -10,9 +10,10 @@ import { provideThemeLeptonX } from '@abp/ng.theme.lepton-x';
 import { provideSideMenuLayout } from '@abp/ng.theme.lepton-x/layouts';
 import { provideLogo, withEnvironmentOptions } from "@abp/ng.theme.shared";
 import { FooterLinksService } from '@volo/ngx-lepton-x.core';
-import { ApplicationConfig, inject, provideAppInitializer } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, inject, provideAppInitializer } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
+import { FileConfigModule } from '@dignite-ng/expand.file-explorer/config';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
 import { APP_ROUTE_PROVIDER } from './route.provider';
@@ -22,6 +23,7 @@ const DIGNITE_REPO_URL = 'https://github.com/dignite-projects/abp-file-storing';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(APP_ROUTES),
+    importProvidersFrom(FileConfigModule.forRoot()),
     APP_ROUTE_PROVIDER,
     provideAppInitializer(() => {
       inject(FooterLinksService).setFooterInfo({
