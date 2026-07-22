@@ -49,7 +49,8 @@ public static class FileExplorerDbContextModelCreatingExtensions
             b.Property(q => q.EntityId).HasMaxLength(FileDescriptorConsts.MaxEntityIdLength);
 
             //Indexes
-            b.HasIndex(q => new { q.TenantId, q.ContainerName, q.BlobName });
+            b.HasIndex(q => new { q.TenantId, q.ContainerName, q.BlobName })
+                .IsUnique();
             b.HasIndex(q => new { q.TenantId, q.ContainerName, q.Md5 })
                 .IsUnique()
                 .HasFilter($"{nameof(FileDescriptor.Md5)} <> ''");
