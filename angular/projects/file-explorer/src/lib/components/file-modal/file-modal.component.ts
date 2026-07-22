@@ -405,9 +405,12 @@ export class FileModalComponent implements OnChanges {
   @Input() selectPickerFile: any[];
 
   ngOnChanges(changes: SimpleChanges): void {
-    //Called before any other lifecycle hook. Use it to inject dependencies, but avoid any serious work here.
-    //Add '${implements OnChanges}' to the class.
-    this.selectedTable = structuredClone(this.selectPickerFile);
+    const selectPickerFileChange = changes.selectPickerFile;
+    if (!selectPickerFileChange) {
+      return;
+    }
+
+    this.selectedTable = structuredClone(selectPickerFileChange.currentValue ?? []);
   }
   /**表格分页切换 */
   onPageChange(newArray) {

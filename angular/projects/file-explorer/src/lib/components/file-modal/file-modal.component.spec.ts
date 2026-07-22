@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { SimpleChange } from '@angular/core';
 
 import { FileModalComponent } from './file-modal.component';
 import { FileExplorerModule } from '../../file-explorer.module';
@@ -34,5 +35,36 @@ describe('FileModalComponent', () => {
     await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(file.status).toBe(2);
+  });
+
+  it('should initialize the selection with an empty array when the input is undefined', () => {
+    component.ngOnChanges({
+      selectPickerFile: new SimpleChange(undefined, undefined, true),
+    });
+
+    expect(component.selectedTable).toEqual([]);
+  });
+
+  it('should preserve the in-progress selection when another input changes', () => {
+    const selectedFile = { id: 'selected' };
+    component.selectedTable = [selectedFile];
+
+    component.ngOnChanges({
+      multiple: new SimpleChange(false, true, false),
+    });
+
+    expect(component.selectedTable).toEqual([selectedFile]);
+  });
+
+  it('should clone the selection when selectPickerFile changes', () => {
+    const selectedFile = { id: 'selected' };
+    const inputFiles = [selectedFile];
+
+    component.ngOnChanges({
+      selectPickerFile: new SimpleChange(undefined, inputFiles, true),
+    });
+
+    expect(component.selectedTable).toEqual(inputFiles);
+    expect(component.selectedTable).not.toBe(inputFiles);
   });
 });
