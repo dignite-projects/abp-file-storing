@@ -24,12 +24,12 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '10.0.302'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version-file: '.nvmrc'
           cache: npm
           cache-dependency-path: angular/package-lock.json
 
