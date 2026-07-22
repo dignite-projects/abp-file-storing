@@ -10,5 +10,5 @@ public static class FileConsts
 
     public static int MaxMimeTypeLength { get; set; } = 128;
 
-    public static int MaxMd5Length { get; set; } = 32;
+    public static int MaxMd5Length { get; set; } = 64;
 }
