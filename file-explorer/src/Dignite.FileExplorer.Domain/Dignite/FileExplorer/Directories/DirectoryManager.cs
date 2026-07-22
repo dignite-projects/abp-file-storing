@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Dignite.Abp.FileStoring;
 using Dignite.FileExplorer.Files;
@@ -28,7 +29,7 @@ public class DirectoryManager : DomainService
     /// <summary>
     /// Directories must be empty before deletion. Children and files are not cascaded or reparented.
     /// </summary>
-    public virtual async Task EnsureEmptyAsync(DirectoryDescriptor directory)
+    public virtual async Task EnsureEmptyAsync(DirectoryDescriptor directory, CancellationToken cancellationToken = default)
     {
         if (!directory.CreatorId.HasValue || FileDescriptorRepository == null)
         {
@@ -38,12 +39,14 @@ public class DirectoryManager : DomainService
         var childDirectories = await DirectoryDescriptorRepository.GetListAsync(
             directory.CreatorId.Value,
             directory.ContainerName,
-            directory.Id);
+            directory.Id,
+            cancellationToken);
         var files = await FileDescriptorRepository.GetListAsync(
             directory.ContainerName,
             null,
             directory.Id,
-            maxResultCount: 1);
+            maxResultCount: 1,
+            cancellationToken: cancellationToken);
 
         if (childDirectories == null || files == null || childDirectories.Count != 0 || files.Count != 0)
         {
@@ -51,13 +54,18 @@ public class DirectoryManager : DomainService
         }
     }
 
-    public virtual async Task<DirectoryDescriptor> CreateAsync(Guid userId, string containerName, string name, Guid? parentId = null)
+    public virtual async Task<DirectoryDescriptor> CreateAsync(
+        Guid userId,
+        string containerName,
+        string name,
+        Guid? parentId = null,
+        CancellationToken cancellationToken = default)
     {
         ContainerNameValidator.Validate(containerName);
 
         if (parentId.HasValue)
         {
-            var parent = await DirectoryDescriptorRepository.FindAsync(parentId.Value, false);
+            var parent = await DirectoryDescriptorRepository.FindAsync(parentId.Value, false, cancellationToken);
             if (parent == null ||
                 !parent.ContainerName.Equals(containerName, StringComparison.OrdinalIgnoreCase) ||
                 parent.TenantId != CurrentTenant.Id ||
@@ -68,51 +76,63 @@ public class DirectoryManager : DomainService
         }
 
         //
-        if (await DirectoryDescriptorRepository.NameExistsAsync(userId, containerName, name, parentId))
+        if (await DirectoryDescriptorRepository.NameExistsAsync(userId, containerName, name, parentId, cancellationToken))
         {
             throw new DirectoryAlreadyExistException(name);
         }
 
         //
-        var order = await DirectoryDescriptorRepository.GetMaxOrderAsync(userId, containerName, parentId);
+        var order = await DirectoryDescriptorRepository.GetMaxOrderAsync(userId, containerName, parentId, cancellationToken);
         var directory = new DirectoryDescriptor(
             GuidGenerator.Create(),
             containerName, name, parentId,
             order + 1,
             CurrentTenant.Id
             );
-        return await DirectoryDescriptorRepository.InsertAsync(directory);
+        return await DirectoryDescriptorRepository.InsertAsync(directory, cancellationToken: cancellationToken);
     }
 
-    public virtual async Task<DirectoryDescriptor> MoveAsync(DirectoryDescriptor directory, Guid? parentId,int order)
+    public virtual async Task<DirectoryDescriptor> MoveAsync(
+        DirectoryDescriptor directory,
+        Guid? parentId,
+        int order,
+        CancellationToken cancellationToken = default)
     {
         if (parentId.HasValue)
         {
-            var parent = await DirectoryDescriptorRepository.GetAsync(parentId.Value);
+            var parent = await DirectoryDescriptorRepository.GetAsync(parentId.Value, cancellationToken: cancellationToken);
             if (!parent.ContainerName.Equals(directory.ContainerName, StringComparison.CurrentCultureIgnoreCase))
             {
                 throw new DirectoryInvalidMoveException();
             }
 
-            if (await IsDescendantOrSelfAsync(directory.Id, parent))
+            if (await IsDescendantOrSelfAsync(directory.Id, parent, cancellationToken))
             {
                 throw new BusinessException(FileExplorerErrorCodes.Directories.ForbidMovingToChild);
             }
         }
 
-        var children = await DirectoryDescriptorRepository.GetListAsync(directory.CreatorId.Value, directory.ContainerName, parentId);
+        var children = await DirectoryDescriptorRepository.GetListAsync(
+            directory.CreatorId.Value,
+            directory.ContainerName,
+            parentId,
+            cancellationToken);
         foreach (var item in children.Where(d=>d.Order>=order && d.Id!=directory.Id))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             item.Order=item.Order+1;
-            await DirectoryDescriptorRepository.UpdateAsync(item);
+            await DirectoryDescriptorRepository.UpdateAsync(item, cancellationToken: cancellationToken);
         }
 
         directory.ParentId = parentId;
         directory.Order = order;
-        return await DirectoryDescriptorRepository.UpdateAsync(directory);
+        return await DirectoryDescriptorRepository.UpdateAsync(directory, cancellationToken: cancellationToken);
     }
 
-    private async Task<bool> IsDescendantOrSelfAsync(Guid directoryId, DirectoryDescriptor parent)
+    private async Task<bool> IsDescendantOrSelfAsync(
+        Guid directoryId,
+        DirectoryDescriptor parent,
+        CancellationToken cancellationToken)
     {
         var visited = new HashSet<Guid>();
         var current = parent;
@@ -129,22 +149,33 @@ public class DirectoryManager : DomainService
                 return false;
             }
 
-            current = await DirectoryDescriptorRepository.GetAsync(current.ParentId.Value);
+            cancellationToken.ThrowIfCancellationRequested();
+            current = await DirectoryDescriptorRepository.GetAsync(
+                current.ParentId.Value,
+                cancellationToken: cancellationToken);
         }
     }
 
-    public virtual async Task<DirectoryDescriptor> UpdateAsync(DirectoryDescriptor directory, string name)
+    public virtual async Task<DirectoryDescriptor> UpdateAsync(
+        DirectoryDescriptor directory,
+        string name,
+        CancellationToken cancellationToken = default)
     {
         //
         if (!directory.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))
         {
-            if (await DirectoryDescriptorRepository.NameExistsAsync(directory.CreatorId.Value, directory.ContainerName, name, directory.ParentId))
+            if (await DirectoryDescriptorRepository.NameExistsAsync(
+                    directory.CreatorId.Value,
+                    directory.ContainerName,
+                    name,
+                    directory.ParentId,
+                    cancellationToken))
             {
                 throw new DirectoryAlreadyExistException(name);
             }
         }
 
         directory.Name = name;
-        return await DirectoryDescriptorRepository.UpdateAsync(directory);
+        return await DirectoryDescriptorRepository.UpdateAsync(directory, cancellationToken: cancellationToken);
     }
 }
