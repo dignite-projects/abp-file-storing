@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dignite.Abp.FileStoring;
 using Dignite.FileExplorer.Directories;
+using Dignite.FileExplorer.Files;
 using NSubstitute;
 using Shouldly;
 using Volo.Abp;
@@ -74,6 +76,24 @@ public class DirectoryManager_Tests
             manager.CreateAsync(userId, "Default", "child", parentId));
 
         exception.Code.ShouldBe(FileExplorerErrorCodes.Directories.DirectoryNotExist);
+    }
+
+    [Fact]
+    public async Task EnsureEmptyAsync_ShouldRejectDirectoriesWithFiles()
+    {
+        var directory = CreateDirectory(Guid.NewGuid(), null);
+        var repository = Substitute.For<IDirectoryDescriptorRepository>();
+        repository.GetListAsync(directory.CreatorId.Value, directory.ContainerName, directory.Id)
+            .Returns(new List<DirectoryDescriptor>());
+        var fileRepository = Substitute.For<IFileDescriptorRepository>();
+        fileRepository.GetListAsync(directory.ContainerName, null, directory.Id, maxResultCount: 1)
+            .Returns(new List<FileDescriptor> { new FileDescriptor(Guid.NewGuid(), "Default", "blob", "file", "text/plain", string.Empty, directory.Id, string.Empty, null) });
+        var manager = new DirectoryManager(repository, new ContainerNameValidator(), fileRepository);
+
+        var exception = await Should.ThrowAsync<DirectoryNotEmptyException>(() =>
+            manager.EnsureEmptyAsync(directory));
+
+        exception.Code.ShouldBe(FileExplorerErrorCodes.Directories.DirectoryNotEmpty);
     }
 
     private static DirectoryDescriptor CreateDirectory(Guid id, Guid? parentId)
