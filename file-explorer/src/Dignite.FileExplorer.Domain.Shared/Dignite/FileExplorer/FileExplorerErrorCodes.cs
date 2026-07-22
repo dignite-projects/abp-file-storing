@@ -17,6 +17,7 @@ public static class FileExplorerErrorCodes
         public const string CellNameNotFound = "FileExplorer.File:0002";
         public const string ImageSizeTooSmall = "FileExplorer.File:0003";
         public const string ImageResizeFailure = "FileExplorer.File:0004";
+        public const string InvalidSorting = "FileExplorer.File:0005";
         //public const string ImageCompressionFailure = "FileExplorer.File:0005";
     }
 }

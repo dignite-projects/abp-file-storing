@@ -23,7 +23,7 @@ public class MongoFileDescriptorRepository : MongoDbRepository<IFileExplorerMong
     {
         var token = GetCancellationToken(cancellationToken);
         return await (await GetMongoQueryableAsync(token))
-            .AnyAsync(x => x.ContainerName == containerName && x.BlobName == blobName && x.ReferBlobName == null, token);
+            .AnyAsync(x => x.ContainerName == containerName && x.BlobName == blobName, token);
     }
 
     public async Task<bool> Md5ExistsAsync(string containerName, string md5, CancellationToken cancellationToken = default)
@@ -43,7 +43,7 @@ public class MongoFileDescriptorRepository : MongoDbRepository<IFileExplorerMong
     public async Task<FileDescriptor> FindByBlobNameAsync(string containerName, string blobName, CancellationToken cancellationToken = default)
     {
         var token = GetCancellationToken(cancellationToken);
-        return await FindAsync(x => x.ContainerName == containerName && x.BlobName == blobName && x.ReferBlobName == null, false, token);
+        return await FindAsync(x => x.ContainerName == containerName && x.BlobName == blobName, false, token);
     }
 
     public async Task<FileDescriptor> FindByMd5Async(string containerName, string md5, CancellationToken cancellationToken = default)
@@ -83,7 +83,7 @@ public class MongoFileDescriptorRepository : MongoDbRepository<IFileExplorerMong
             entityId,
             token);
 
-        return await query.OrderBy(sorting.IsNullOrWhiteSpace() ? $"{nameof(FileDescriptor.CreationTime)} asc" : sorting)
+        return await query.OrderBy(FileDescriptorSorting.Normalize(sorting, $"{nameof(FileDescriptor.CreationTime)} asc"))
                   .Skip(skipCount)
                   .Take(maxResultCount)
                   .ToListAsync(token);
