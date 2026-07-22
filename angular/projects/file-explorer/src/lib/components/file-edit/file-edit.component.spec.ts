@@ -4,6 +4,7 @@ import { FileEditComponent } from './file-edit.component';
 import { FileExplorerModule } from '../../file-explorer.module';
 import { CoreTestingModule } from '@abp/ng.core/testing';
 import { NgxValidateCoreModule } from '@ngx-validate/core';
+import { GetImageLacolBase64urlService } from '../../services/get-image-lacol-base64url.service';
 
 describe('FileEditComponent', () => {
   let component: FileEditComponent;
@@ -20,5 +21,17 @@ describe('FileEditComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should finish preparing every selected file before returning', async () => {
+    const imageUrlService = TestBed.inject(GetImageLacolBase64urlService);
+    imageUrlService.get = () => 'blob:test-preview';
+    const files = [new File(['content'], 'test.txt', { type: 'text/plain' })] as any[];
+
+    const result = await component.setfileSizeUnits(files);
+
+    expect(result).toBe(files);
+    expect(files[0].src).toBe('blob:test-preview');
+    expect(files[0].fileSize).toBeTruthy();
   });
 });

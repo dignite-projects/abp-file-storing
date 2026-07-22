@@ -1,5 +1,5 @@
 /* eslint-disable @angular-eslint/component-selector */
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnDestroy, Output, ViewChild } from '@angular/core';
 import { GetImageLacolBase64urlService } from '../../services/get-image-lacol-base64url.service';
 import { FormatFileSizePipe } from '../../pipe/format-file-size.pipe';
 
@@ -9,7 +9,7 @@ import { FormatFileSizePipe } from '../../pipe/format-file-size.pipe';
   templateUrl: './file-edit.component.html',
   styleUrls: ['./file-edit.component.scss'],
 })
-export class FileEditComponent {
+export class FileEditComponent implements OnDestroy {
   constructor(
     public _FormatFileSizePipe: FormatFileSizePipe,
     private _GetImageLacolBase64urlService: GetImageLacolBase64urlService,
@@ -45,6 +45,7 @@ export class FileEditComponent {
 
   /**文件表格数据 */
   filesTableData: any[] = [];
+  private readonly previewObjectUrls = new Set<string>();
   /** 待删除已上传的文件们*/
   deleteTheUploadedFiles: any[] = [];
 
@@ -71,6 +72,7 @@ export class FileEditComponent {
   /**删除文件表格的项 */
   deleteFileTableItem(index, item) {
     this.filesTableData.splice(index, 1);
+    this.releasePreviewUrl(item.src);
     if (item.id) {
       this.deleteTheUploadedFiles.push(item);
     }
@@ -91,15 +93,32 @@ export class FileEditComponent {
 
   /**设置值文件大小单位/ */
   async setfileSizeUnits(files: File[] | any[]): Promise<any> {
-    return new Promise((resolve) => {
-      const formattedFiles = [];
-      files.forEach(async file => {
-        file.fileSize = this._FormatFileSizePipe.transform(file.size);
-        formattedFiles.push(file);
-        //设置选择图片的本地url
-        if (!file.src) file.src = await this._GetImageLacolBase64urlService.get(file);
-      });
-      resolve(files);
-    });
+    for (const file of files as any[]) {
+      const fileItem = file as any;
+      const previewItem = fileItem as { src?: string };
+      fileItem.fileSize = this._FormatFileSizePipe.transform(fileItem.size);
+      // Use a browser-managed object URL instead of retaining a base64 copy in memory.
+      if (!previewItem.src && fileItem instanceof Blob) {
+        previewItem.src = this._GetImageLacolBase64urlService.get(fileItem);
+        this.previewObjectUrls.add(previewItem.src);
+      }
+    }
+
+    return files;
+  }
+
+  ngOnDestroy(): void {
+    for (const objectUrl of this.previewObjectUrls) {
+      URL.revokeObjectURL(objectUrl);
+    }
+    this.previewObjectUrls.clear();
+  }
+
+  private releasePreviewUrl(url: string): void {
+    if (!this.previewObjectUrls.delete(url)) {
+      return;
+    }
+
+    URL.revokeObjectURL(url);
   }
 }
