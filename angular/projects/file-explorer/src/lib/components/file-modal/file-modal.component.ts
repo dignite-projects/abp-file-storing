@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-this-alias */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Component,
   EventEmitter,
