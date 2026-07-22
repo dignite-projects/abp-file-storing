@@ -233,7 +233,8 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "projects/file-explorer/tsconfig.spec.json"
+            "tsConfig": "projects/file-explorer/tsconfig.spec.json",
+            "runner": "vitest"
           }
         },
         "lint": {

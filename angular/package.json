@@ -8,7 +8,7 @@
     "build:lib": "ng build file-explorer",
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "ng test file-explorer",
     "lint": "ng lint"
   },
   "private": true,

@@ -2,9 +2,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import { FileModalTreeComponent } from './file-modal-tree.component';
+import { FileExplorerModule } from '../../file-explorer.module';
 import * as DirectoryDescriptorService from '../../proxy/dignite/file-explorer/directories';
 import { ToasterService, ConfirmationService } from '@abp/ng.theme.shared';
 import { LocalizationService } from '@abp/ng.core';
+import { CoreTestingModule } from '@abp/ng.core/testing';
+import { NgxValidateCoreModule } from '@ngx-validate/core';
 import { ValidatorsService } from '../../services/validators.service';
 
 describe('FileModalTreeComponent', () => {
@@ -13,7 +16,7 @@ describe('FileModalTreeComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [FileModalTreeComponent],
+      imports: [FileExplorerModule, CoreTestingModule.withConfig(), NgxValidateCoreModule.forRoot()],
       providers: [
         {
           provide: DirectoryDescriptorService.FileDescriptorService,
