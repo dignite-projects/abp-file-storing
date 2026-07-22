@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Dignite.Abp.FileStoring;
 using Dignite.Abp.FileStoring.Imaging;
@@ -16,6 +17,7 @@ using Volo.Abp.Application.Services;
 using Volo.Abp.BlobStoring;
 using Volo.Abp.Content;
 using Volo.Abp.Imaging;
+using Volo.Abp.Threading;
 using Volo.Abp;
 
 namespace Dignite.FileExplorer.Files;
@@ -40,6 +42,9 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     private readonly IImageResizer _imageResizer;
     private readonly IMemoryCache _imageResizeCache;
 
+    private CancellationToken RequestCancellationToken =>
+        LazyServiceProvider.LazyGetService<ICancellationTokenProvider>()?.Token ?? CancellationToken.None;
+
     public FileDescriptorAppService(
         IFileDescriptorRepository blobRepository,
         IDirectoryDescriptorRepository directoryRepository,
@@ -61,19 +66,27 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     [Authorize]
     public async Task<FileDescriptorDto> CreateAsync(CreateFileInput input)
     {
+        var cancellationToken = RequestCancellationToken;
         // Build a temporary file for authorization verification
         var tempFileDescriptor = new FileDescriptor(Guid.NewGuid(), input.ContainerName, string.Empty, string.Empty, string.Empty, input.CellName, input.DirectoryId, input.EntityId, CurrentTenant.Id);
         await AuthorizationService.CheckAsync(tempFileDescriptor, CommonOperations.Create);
 
         // formal start of file creation
-        var fileDescriptor = await _fileManager.CreateAsync(input.ContainerName, input.File, input.CellName, input.DirectoryId, input.EntityId);
+        var fileDescriptor = await _fileManager.CreateAsync(
+            input.ContainerName,
+            input.File,
+            input.CellName,
+            input.DirectoryId,
+            input.EntityId,
+            cancellationToken);
         return ObjectMapper.Map<FileDescriptor, FileDescriptorDto>(fileDescriptor);
     }
 
     [Authorize]
     public async Task<FileDescriptorDto> UpdateAsync(Guid id, UpdateFileInput input)
     {
-        var entity = await _fileRepository.GetAsync(id);
+        var cancellationToken = RequestCancellationToken;
+        var entity = await _fileRepository.GetAsync(id, cancellationToken: cancellationToken);
 
         if (input.DirectoryId.HasValue)
         {
@@ -94,7 +107,10 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
 
         if (entity.DirectoryId.HasValue)
         {
-            var directory = await _directoryRepository.FindAsync(entity.DirectoryId.Value, false);
+            var directory = await _directoryRepository.FindAsync(
+                entity.DirectoryId.Value,
+                false,
+                cancellationToken);
             if (directory == null ||
                 !directory.ContainerName.Equals(entity.ContainerName, StringComparison.CurrentCultureIgnoreCase) ||
                 directory.CreatorId != entity.CreatorId ||
@@ -105,37 +121,48 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         }
 
         await _fileManager.ValidateAsync(entity);
-        await _fileRepository.UpdateAsync(entity);
+        await _fileRepository.UpdateAsync(entity, cancellationToken: cancellationToken);
         return ObjectMapper.Map<FileDescriptor, FileDescriptorDto>(entity);
     }
 
     [Authorize]
     public async Task DeleteAsync(Guid id)
     {
-        var result = await _fileRepository.FindAsync(id, false);
+        var cancellationToken = RequestCancellationToken;
+        var result = await _fileRepository.FindAsync(id, false, cancellationToken);
         if (result != null)
         {
             await AuthorizationService.CheckAsync(result, CommonOperations.Delete);
-            await _fileManager.DeleteAsync(result);
+            await _fileManager.DeleteAsync(result, cancellationToken);
         }
     }
 
     [Authorize]
     public async Task DeleteByEntityIdAsync([NotNull] string containerName, string entityId)
     {
+        var cancellationToken = RequestCancellationToken;
         var allowDelete = await AuthorizationService.IsGrantedAsync(FileExplorerPermissions.Files.Management);
         var creatorId = allowDelete?null:CurrentUser.Id;
-        var result = await _fileRepository.GetListAsync(containerName, creatorId, null, null, entityId);
+        var result = await _fileRepository.GetListAsync(
+            containerName,
+            creatorId,
+            null,
+            null,
+            entityId,
+            cancellationToken: cancellationToken);
         foreach (var file in result)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             await AuthorizationService.CheckAsync(file, CommonOperations.Delete);
-            await _fileManager.DeleteAsync(file);
+            await _fileManager.DeleteAsync(file, cancellationToken);
         }
     }
 
     public async Task<FileDescriptorDto> GetAsync(Guid id)
     {
-        var entity = await _fileRepository.GetAsync(id);
+        var entity = await _fileRepository.GetAsync(
+            id,
+            cancellationToken: RequestCancellationToken);
         await AuthorizationService.CheckAsync(entity, CommonOperations.Get);
         return ObjectMapper.Map<FileDescriptor, FileDescriptorDto>(entity);
     }
@@ -151,12 +178,28 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     [Authorize]
     public async Task<PagedResultDto<FileDescriptorDto>> GetListAsync(GetFilesInput input)
     {
+        var cancellationToken = RequestCancellationToken;
         if (!await AuthorizationService.IsGrantedAsync(FileExplorerPermissions.Files.Management))
         {
             input.CreatorId = CurrentUser.Id;
         }
-        var count = await _fileRepository.GetCountAsync(input.ContainerName, input.CreatorId, input.DirectoryId, input.Filter, input.EntityId);
-        var result = await _fileRepository.GetListAsync(input.ContainerName, input.CreatorId, input.DirectoryId, input.Filter, input.EntityId, input.Sorting, input.MaxResultCount, input.SkipCount);
+        var count = await _fileRepository.GetCountAsync(
+            input.ContainerName,
+            input.CreatorId,
+            input.DirectoryId,
+            input.Filter,
+            input.EntityId,
+            cancellationToken);
+        var result = await _fileRepository.GetListAsync(
+            input.ContainerName,
+            input.CreatorId,
+            input.DirectoryId,
+            input.Filter,
+            input.EntityId,
+            input.Sorting,
+            input.MaxResultCount,
+            input.SkipCount,
+            cancellationToken);
 
         return new PagedResultDto<FileDescriptorDto>(
             count,
@@ -166,7 +209,8 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
 
     public virtual async Task<IRemoteStreamContent> GetStreamAsync([NotNull] string containerName, [NotNull] string blobName, ImageResizeInput imageResize = null)
     {
-        var entity = await _fileManager.GetOrNullAsync(containerName, blobName);
+        var cancellationToken = RequestCancellationToken;
+        var entity = await _fileManager.GetOrNullAsync(containerName, blobName, cancellationToken);
 
         if (entity != null)
         {
@@ -177,7 +221,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
             }
 
             var blobContainer = _blobContainerFactory.Create(containerName);
-            Stream stream = await blobContainer.GetOrNullAsync(blobName);
+            Stream stream = await blobContainer.GetOrNullAsync(blobName, cancellationToken);
 
             if (stream != null)
             {
@@ -242,7 +286,10 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
                         if ((result.State == ImageProcessState.Done ||
                              result.Result is not null && result.Result.CanRead) && result.Result is not null)
                         {
-                            var resizedBytes = await ReadStreamAsync(result.Result, MaxResizePixelCount * 4);
+                            var resizedBytes = await ReadStreamAsync(
+                                result.Result,
+                                MaxResizePixelCount * 4,
+                                cancellationToken);
                             if (resizedBytes.Length <= MaxCachedImageBytes)
                             {
                                 _imageResizeCache.Set(
@@ -303,13 +350,16 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         }
     }
 
-    private static async Task<byte[]> ReadStreamAsync(Stream source, long maxBytes)
+    private static async Task<byte[]> ReadStreamAsync(
+        Stream source,
+        long maxBytes,
+        CancellationToken cancellationToken)
     {
         using var output = new MemoryStream();
         var buffer = new byte[81920];
         long totalBytes = 0;
         int bytesRead;
-        while ((bytesRead = await source.ReadAsync(buffer.AsMemory())) > 0)
+        while ((bytesRead = await source.ReadAsync(buffer.AsMemory(), cancellationToken)) > 0)
         {
             totalBytes += bytesRead;
             if (totalBytes > maxBytes)
@@ -320,7 +370,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
                 );
             }
 
-            await output.WriteAsync(buffer.AsMemory(0, bytesRead));
+            await output.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
         }
 
         return output.ToArray();
@@ -361,11 +411,18 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
 
     public async Task<ListResultDto<FileDescriptorDto>> GetListByEntityIdAsync([NotNull] string containerName, string entityId)
     {
+        var cancellationToken = RequestCancellationToken;
         //Verify authorization using a virtual file
         var virtualFileDescriptorEntity = new FileDescriptor(Guid.NewGuid(), containerName, Guid.NewGuid().ToString(), "virtualFileName.jpg", "image/jpeg", null, null, entityId, CurrentTenant.Id);
         await AuthorizationService.CheckAsync(virtualFileDescriptorEntity, CommonOperations.Get);
 
-        var result = await _fileRepository.GetListAsync(containerName, null, null, null, entityId);
+        var result = await _fileRepository.GetListAsync(
+            containerName,
+            null,
+            null,
+            null,
+            entityId,
+            cancellationToken: cancellationToken);
 
         return new ListResultDto<FileDescriptorDto>(
             ObjectMapper.Map<List<FileDescriptor>, List<FileDescriptorDto>>(result)

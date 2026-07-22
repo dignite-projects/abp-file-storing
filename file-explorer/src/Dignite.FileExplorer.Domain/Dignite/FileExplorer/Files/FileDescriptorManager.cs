@@ -12,6 +12,7 @@ using Volo.Abp.Collections;
 using Volo.Abp.Content;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Services;
+using Volo.Abp.Threading;
 
 namespace Dignite.FileExplorer.Files;
 
@@ -38,11 +39,12 @@ public class FileDescriptorManager : DomainService
         [NotNull] IRemoteStreamContent stream,
         [CanBeNull] string cellName,
         [CanBeNull] Guid? directoryId,
-        [CanBeNull] IEntity entity)
+        [CanBeNull] IEntity entity,
+        CancellationToken cancellationToken = default)
         where TContainer : class
     {
         var containerName = BlobContainerNameAttribute.GetContainerName<TContainer>();
-        return await CreateAsync(containerName, stream, cellName, directoryId, entity);
+        return await CreateAsync(containerName, stream, cellName, directoryId, entity, cancellationToken);
     }
 
     public virtual async Task<FileDescriptor> CreateAsync(
@@ -50,14 +52,16 @@ public class FileDescriptorManager : DomainService
         [NotNull] IRemoteStreamContent stream,
         [CanBeNull] string cellName,
         [CanBeNull] Guid? directoryId,
-        [CanBeNull] IEntity entity)
+        [CanBeNull] IEntity entity,
+        CancellationToken cancellationToken = default)
     {
         return await CreateAsync(
             containerName,
             stream,
             cellName,
             directoryId,
-            entity == null ? null : GetEntityKey(entity)
+            entity == null ? null : GetEntityKey(entity),
+            cancellationToken
         );
     }
 
@@ -66,7 +70,8 @@ public class FileDescriptorManager : DomainService
         [NotNull] IRemoteStreamContent stream,
         [CanBeNull] string cellName,
         [CanBeNull] Guid? directoryId,
-        [CanBeNull] string entityId)
+        [CanBeNull] string entityId,
+        CancellationToken cancellationToken = default)
     {
         ValidateFileCell(containerName, cellName);
 
@@ -82,12 +87,13 @@ public class FileDescriptorManager : DomainService
             entityId,
             CurrentTenant.Id);
 
-        return await CreateAsync(fileDescriptor, stream);
+        return await CreateAsync(fileDescriptor, stream, cancellationToken);
     }
 
     public virtual async Task<FileDescriptor> CreateAsync(
         [NotNull] FileDescriptor file,
-        [NotNull] IRemoteStreamContent remoteStream)
+        [NotNull] IRemoteStreamContent remoteStream,
+        CancellationToken cancellationToken = default)
     {
         var maxFileSizeInBytes = _blobContainerConfigurationProvider
             .Get(file.ContainerName)
@@ -96,9 +102,9 @@ public class FileDescriptorManager : DomainService
 
         using (var ms = new MemoryStream())
         {
-            await CopyToAsync(remoteStream.GetStream(), ms, maxFileSizeInBytes);
+            await CopyToAsync(remoteStream.GetStream(), ms, maxFileSizeInBytes, cancellationToken);
             ms.Position = 0;
-            return await CreateAsync(file, ms, true);
+            return await CreateAsync(file, ms, true, cancellationToken);
         }
     }
 
@@ -137,7 +143,7 @@ public class FileDescriptorManager : DomainService
                 previousBlob = await BackupBlobAsync(file.ContainerName, previousBlobName, cancellationToken);
             }
 
-            stream = await FileHandlers(file, stream);
+            stream = await FileHandlers(file, stream, cancellationToken);
             if (stream.CanSeek)
             {
                 stream.Position = 0;
@@ -332,11 +338,15 @@ public class FileDescriptorManager : DomainService
         }
     }
 
-    private static async Task CopyToAsync(Stream source, Stream destination, long maxFileSizeInBytes)
+    private static async Task CopyToAsync(
+        Stream source,
+        Stream destination,
+        long maxFileSizeInBytes,
+        CancellationToken cancellationToken)
     {
         if (maxFileSizeInBytes <= 0)
         {
-            await source.CopyToAsync(destination);
+            await source.CopyToAsync(destination, cancellationToken);
             return;
         }
 
@@ -344,7 +354,7 @@ public class FileDescriptorManager : DomainService
         long totalBytes = 0;
         int bytesRead;
 
-        while ((bytesRead = await source.ReadAsync(buffer.AsMemory())) > 0)
+        while ((bytesRead = await source.ReadAsync(buffer.AsMemory(), cancellationToken)) > 0)
         {
             totalBytes += bytesRead;
             if (totalBytes > maxFileSizeInBytes)
@@ -357,7 +367,7 @@ public class FileDescriptorManager : DomainService
                 );
             }
 
-            await destination.WriteAsync(buffer.AsMemory(0, bytesRead));
+            await destination.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
         }
     }
 
@@ -372,7 +382,10 @@ public class FileDescriptorManager : DomainService
         return string.Join(",", keys);
     }
 
-    private async Task<Stream> FileHandlers(FileDescriptor file, Stream stream)
+    private async Task<Stream> FileHandlers(
+        FileDescriptor file,
+        Stream stream,
+        CancellationToken cancellationToken)
     {
         var configuration = _blobContainerConfigurationProvider.Get(file.ContainerName);
         var processHandlers = configuration.GetConfigurationOrDefault<ITypeList<IFileHandler>>(BlobContainerConfigurationNames.FileHandlers, null);
@@ -384,6 +397,7 @@ public class FileDescriptorManager : DomainService
             {
                 foreach (var handlerType in processHandlers)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var handler = scope.ServiceProvider
                         .GetRequiredService(handlerType)
                         .As<IFileHandler>();

@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Threading;
 
 namespace Dignite.FileExplorer.Directories;
 
@@ -10,6 +12,9 @@ public class DirectoryDescriptorAppService : FileExplorerAppService, IDirectoryD
 {
     private readonly DirectoryManager _directoryManager;
     private readonly IDirectoryDescriptorRepository _directoryRepository;
+
+    private CancellationToken RequestCancellationToken =>
+        LazyServiceProvider.LazyGetService<ICancellationTokenProvider>()?.Token ?? CancellationToken.None;
 
     public DirectoryDescriptorAppService(DirectoryManager directoryManager, IDirectoryDescriptorRepository directoryRepository)
     {
@@ -20,6 +25,7 @@ public class DirectoryDescriptorAppService : FileExplorerAppService, IDirectoryD
     [Authorize]
     public async Task<DirectoryDescriptorDto> CreateAsync(CreateDirectoryInput input)
     {
+        var cancellationToken = RequestCancellationToken;
         var resource = new DirectoryDescriptor(
             GuidGenerator.Create(),
             input.ContainerName,
@@ -32,23 +38,31 @@ public class DirectoryDescriptorAppService : FileExplorerAppService, IDirectoryD
         };
         await AuthorizationService.CheckAsync(resource, CommonOperations.Create);
 
-        var entity = await _directoryManager.CreateAsync(CurrentUser.Id.Value, input.ContainerName, input.Name, input.ParentId);
+        var entity = await _directoryManager.CreateAsync(
+            CurrentUser.Id.Value,
+            input.ContainerName,
+            input.Name,
+            input.ParentId,
+            cancellationToken);
         return ObjectMapper.Map<DirectoryDescriptor, DirectoryDescriptorDto>(entity);
     }
 
     [Authorize]
     public async Task DeleteAsync(Guid id)
     {
-        var entity = await _directoryRepository.GetAsync(id);
+        var cancellationToken = RequestCancellationToken;
+        var entity = await _directoryRepository.GetAsync(id, cancellationToken: cancellationToken);
         await AuthorizationService.CheckAsync(entity, CommonOperations.Delete);
-        await _directoryManager.EnsureEmptyAsync(entity);
-        await _directoryRepository.DeleteAsync(entity);
+        await _directoryManager.EnsureEmptyAsync(entity, cancellationToken);
+        await _directoryRepository.DeleteAsync(entity, cancellationToken: cancellationToken);
     }
 
     [Authorize]
     public async Task<DirectoryDescriptorDto> GetAsync(Guid id)
     {
-        var entity = await _directoryRepository.GetAsync(id);
+        var entity = await _directoryRepository.GetAsync(
+            id,
+            cancellationToken: RequestCancellationToken);
         await AuthorizationService.CheckAsync(entity, CommonOperations.Get);
         return
             ObjectMapper.Map<DirectoryDescriptor, DirectoryDescriptorDto>(entity);
@@ -57,7 +71,10 @@ public class DirectoryDescriptorAppService : FileExplorerAppService, IDirectoryD
     [Authorize]
     public async Task<PagedResultDto<DirectoryDescriptorInfoDto>> GetListAsync(GetDirectoriesInput input)
     {
-        var result = await _directoryRepository.GetAllByUserAsync(CurrentUser.Id.Value, input.ContainerName);
+        var result = await _directoryRepository.GetAllByUserAsync(
+            CurrentUser.Id.Value,
+            input.ContainerName,
+            RequestCancellationToken);
         var dtoList = ObjectMapper.Map<List<DirectoryDescriptor>, List<DirectoryDescriptorInfoDto>>(result);
         return new PagedResultDto<DirectoryDescriptorInfoDto>(dtoList.Count, dtoList.BuildTree());
     }
@@ -65,23 +82,25 @@ public class DirectoryDescriptorAppService : FileExplorerAppService, IDirectoryD
     [Authorize]
     public async Task<DirectoryDescriptorDto> MoveAsync(Guid id, MoveDirectoryInput input)
     {
-        var entity = await _directoryRepository.GetAsync(id, false);
+        var cancellationToken = RequestCancellationToken;
+        var entity = await _directoryRepository.GetAsync(id, false, cancellationToken);
         await AuthorizationService.CheckAsync(entity, CommonOperations.Update);
         if (input.ParentId.HasValue)
         {
-            var parent = await _directoryRepository.GetAsync(input.ParentId.Value, false);
+            var parent = await _directoryRepository.GetAsync(input.ParentId.Value, false, cancellationToken);
             await AuthorizationService.CheckAsync(parent, CommonOperations.Update);
         }
-        entity = await _directoryManager.MoveAsync(entity, input.ParentId, input.Order);
+        entity = await _directoryManager.MoveAsync(entity, input.ParentId, input.Order, cancellationToken);
         return ObjectMapper.Map<DirectoryDescriptor, DirectoryDescriptorDto>(entity);
     }
 
     [Authorize]
     public async Task<DirectoryDescriptorDto> UpdateAsync(Guid id, UpdateDirectoryInput input)
     {
-        var entity = await _directoryRepository.GetAsync(id, false);
+        var cancellationToken = RequestCancellationToken;
+        var entity = await _directoryRepository.GetAsync(id, false, cancellationToken);
         await AuthorizationService.CheckAsync(entity, CommonOperations.Update);
-        await _directoryManager.UpdateAsync(entity, input.Name);
+        await _directoryManager.UpdateAsync(entity, input.Name, cancellationToken);
         return
             ObjectMapper.Map<DirectoryDescriptor, DirectoryDescriptorDto>(entity);
     }
