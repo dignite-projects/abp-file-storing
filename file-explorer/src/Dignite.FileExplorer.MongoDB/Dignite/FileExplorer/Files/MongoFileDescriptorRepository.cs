@@ -83,7 +83,7 @@ public class MongoFileDescriptorRepository : MongoDbRepository<IFileExplorerMong
             entityId,
             token);
 
-        return await query.OrderBy(FileDescriptorSorting.Normalize(sorting, $"{nameof(FileDescriptor.CreationTime)} asc"))
+        return await query.OrderBy(FileDescriptorSorting.Normalize(sorting, $"{nameof(FileDescriptor.CreationTime)} desc"))
                   .Skip(skipCount)
                   .Take(maxResultCount)
                   .ToListAsync(token);
