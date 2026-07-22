@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
@@ -17,17 +19,23 @@ public class HostDbMigrationService : ITransientDependency
     private readonly HostDbSchemaMigrator _dbSchemaMigrator;
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IConfiguration _configuration;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public HostDbMigrationService(
         IDataSeeder dataSeeder,
         HostDbSchemaMigrator dbSchemaMigrator,
         ITenantRepository tenantRepository,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        IConfiguration configuration,
+        IHostEnvironment hostEnvironment)
     {
         _dataSeeder = dataSeeder;
         _dbSchemaMigrator = dbSchemaMigrator;
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
+        _configuration = configuration;
+        _hostEnvironment = hostEnvironment;
 
         Logger = NullLogger<HostDbMigrationService>.Instance;
     }
@@ -97,8 +105,28 @@ public class HostDbMigrationService : ITransientDependency
         
         await _dataSeeder.SeedAsync(new DataSeedContext(tenant?.Id)
             .WithProperty(IdentityDataSeedContributor.AdminEmailPropertyName, HostConsts.AdminEmailDefaultValue)
-            .WithProperty(IdentityDataSeedContributor.AdminPasswordPropertyName, HostConsts.AdminPasswordDefaultValue)
+            .WithProperty(IdentityDataSeedContributor.AdminPasswordPropertyName, GetAdminPassword())
         );
+    }
+
+    private string GetAdminPassword()
+    {
+        var configuredPassword = _configuration[HostConsts.AdminPasswordConfigurationKey];
+        if (!string.IsNullOrWhiteSpace(configuredPassword))
+        {
+            return configuredPassword;
+        }
+
+        if (_hostEnvironment.IsDevelopment())
+        {
+            Logger.LogWarning(
+                "Using the ABP development admin password. Set {ConfigurationKey} before sharing this environment.",
+                HostConsts.AdminPasswordConfigurationKey);
+            return IdentityDataSeedContributor.AdminPasswordDefaultValue;
+        }
+
+        throw new InvalidOperationException(
+            $"{HostConsts.AdminPasswordConfigurationKey} must be configured outside the Development environment.");
     }
 
     private bool AddInitialMigrationIfNotExist()
