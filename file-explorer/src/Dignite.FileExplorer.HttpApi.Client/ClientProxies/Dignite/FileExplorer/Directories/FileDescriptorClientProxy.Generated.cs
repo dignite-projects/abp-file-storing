@@ -49,14 +49,6 @@ public partial class FileDescriptorClientProxy : ClientProxyBase<IDirectoryDescr
         });
     }
 
-    public virtual async Task<ListResultDto<DirectoryDescriptorInfoDto>> GetMyAsync(string containerName)
-    {
-        return await RequestAsync<ListResultDto<DirectoryDescriptorInfoDto>>(nameof(GetMyAsync), new ClientProxyRequestTypeValue
-        {
-            { typeof(string), containerName }
-        });
-    }
-
     public virtual async Task<DirectoryDescriptorDto> MoveAsync(Guid id, MoveDirectoryInput input)
     {
         return await RequestAsync<DirectoryDescriptorDto>(nameof(MoveAsync), new ClientProxyRequestTypeValue

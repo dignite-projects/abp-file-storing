@@ -68,13 +68,13 @@ public partial class FileDescriptorClientProxy : ClientProxyBase<IFileDescriptor
         });
     }
 
-    public virtual async Task<IRemoteStreamContent> GetStreamAsync(string containerName, string blobName, ImageResizeInput imageResize)
+    public virtual async Task<IRemoteStreamContent> GetStreamAsync(string containerName, string blobName, ImageResizeInput imageResize = null)
     {
         return await RequestAsync<IRemoteStreamContent>(nameof(GetStreamAsync), new ClientProxyRequestTypeValue
         {
             { typeof(string), containerName },
             { typeof(string), blobName },
-            { typeof(string), imageResize }
+            { typeof(ImageResizeInput), imageResize }
         });
     }
 

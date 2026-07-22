@@ -697,23 +697,6 @@
                   }
                 },
                 {
-                  "name": "GetMyAsync",
-                  "parametersOnMethod": [
-                    {
-                      "name": "containerName",
-                      "typeAsString": "System.String, System.Private.CoreLib",
-                      "type": "System.String",
-                      "typeSimple": "string",
-                      "isOptional": false,
-                      "defaultValue": null
-                    }
-                  ],
-                  "returnValue": {
-                    "type": "Volo.Abp.Application.Dtos.ListResultDto<Dignite.FileExplorer.Directories.DirectoryDescriptorInfoDto>",
-                    "typeSimple": "Volo.Abp.Application.Dtos.ListResultDto<Dignite.FileExplorer.Directories.DirectoryDescriptorInfoDto>"
-                  }
-                },
-                {
                   "name": "GetAsync",
                   "parametersOnMethod": [
                     {
@@ -1009,43 +992,6 @@
               },
               "allowAnonymous": null,
               "implementFrom": "Volo.Abp.Application.Services.IReadOnlyAppService<Dignite.FileExplorer.Directories.DirectoryDescriptorDto,Dignite.FileExplorer.Directories.DirectoryDescriptorInfoDto,System.Guid,Dignite.FileExplorer.Directories.GetDirectoriesInput>"
-            },
-            "GetMyAsyncByContainerName": {
-              "uniqueName": "GetMyAsyncByContainerName",
-              "name": "GetMyAsync",
-              "httpMethod": "GET",
-              "url": "api/file-explorer/directories/my/{containerName}",
-              "supportedVersions": [],
-              "parametersOnMethod": [
-                {
-                  "name": "containerName",
-                  "typeAsString": "System.String, System.Private.CoreLib",
-                  "type": "System.String",
-                  "typeSimple": "string",
-                  "isOptional": false,
-                  "defaultValue": null
-                }
-              ],
-              "parameters": [
-                {
-                  "nameOnMethod": "containerName",
-                  "name": "containerName",
-                  "jsonName": null,
-                  "type": "System.String",
-                  "typeSimple": "string",
-                  "isOptional": false,
-                  "defaultValue": null,
-                  "constraintTypes": [],
-                  "bindingSourceId": "Path",
-                  "descriptorName": ""
-                }
-              ],
-              "returnValue": {
-                "type": "Volo.Abp.Application.Dtos.ListResultDto<Dignite.FileExplorer.Directories.DirectoryDescriptorInfoDto>",
-                "typeSimple": "Volo.Abp.Application.Dtos.ListResultDto<Dignite.FileExplorer.Directories.DirectoryDescriptorInfoDto>"
-              },
-              "allowAnonymous": null,
-              "implementFrom": "Dignite.FileExplorer.Directories.IDirectoryDescriptorAppService"
             },
             "MoveAsyncByIdAndInput": {
               "uniqueName": "MoveAsyncByIdAndInput",
