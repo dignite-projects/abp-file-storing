@@ -54,6 +54,8 @@ public static class FileExplorerDbContextModelCreatingExtensions
             b.HasIndex(q => new { q.TenantId, q.ContainerName, q.Md5 })
                 .IsUnique()
                 .HasFilter($"{nameof(FileDescriptor.Md5)} <> ''");
+            b.HasIndex(q => new { q.TenantId, q.ContainerName, q.ReferBlobName });
+            b.HasIndex(q => new { q.TenantId, q.ContainerName, q.EntityId });
             b.HasIndex(q => new { q.TenantId, q.ContainerName,q.CreationTime, q.CreatorId, q.DirectoryId });
 
             b.ApplyObjectExtensionMappings();
