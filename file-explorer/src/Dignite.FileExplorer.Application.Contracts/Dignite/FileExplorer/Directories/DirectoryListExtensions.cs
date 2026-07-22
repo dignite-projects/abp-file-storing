@@ -15,22 +15,32 @@ public static class DirectoryListExtensions
     /// <returns></returns>
     public static DirectoryDescriptorInfoDto FindById([NotNull] this IEnumerable<DirectoryDescriptorInfoDto> source, Guid id)
     {
-        DirectoryDescriptorInfoDto result = source.FirstOrDefault(ou => ou.Id == id);
+        return FindById(source, id, new HashSet<Guid>());
+    }
 
-        if (result == null)
+    private static DirectoryDescriptorInfoDto FindById(IEnumerable<DirectoryDescriptorInfoDto> source, Guid id, HashSet<Guid> visited)
+    {
+        foreach (var item in source)
         {
-            foreach (var item in source)
+            if (!visited.Add(item.Id))
             {
-                if (item.Children != null && item.Children.Any())
-                {
-                    result = FindById(item.Children, id);
-                    if (result != null)
-                        return result;
-                }
+                continue;
+            }
+
+            if (item.Id == id)
+            {
+                return item;
+            }
+
+            if (item.Children != null && item.Children.Any())
+            {
+                var result = FindById(item.Children, id, visited);
+                if (result != null)
+                    return result;
             }
         }
 
-        return result;
+        return null;
     }
 
     /// <summary>
@@ -41,10 +51,16 @@ public static class DirectoryListExtensions
     public static IReadOnlyList<DirectoryDescriptorInfoDto> ToLevelList([NotNull] this IReadOnlyList<DirectoryDescriptorInfoDto> source)
     {
         var result = new List<DirectoryDescriptorInfoDto>();
+        var visited = new HashSet<Guid>();
         foreach (var ou in source)
         {
+            if (!visited.Add(ou.Id))
+            {
+                continue;
+            }
+
             result.Add(ou);
-            FindChildren(result, ou);
+            FindChildren(result, ou, visited);
         }
         return result;
     }
@@ -58,7 +74,7 @@ public static class DirectoryListExtensions
             tree.AddRange(source.Where(p => p.ParentId == parentId).ToList());
             foreach (var ou in tree)
             {
-                AddChildren(ou, source);
+                AddChildren(ou, source, new HashSet<Guid> { ou.Id });
             }
             return tree;
         }
@@ -68,45 +84,55 @@ public static class DirectoryListExtensions
     public static IReadOnlyList<DirectoryDescriptorInfoDto> GetParentList([NotNull] this DirectoryDescriptorInfoDto directory, IEnumerable<DirectoryDescriptorInfoDto> source)
     {
         var result = new List<DirectoryDescriptorInfoDto>();
-        FindParent(directory,source,result);
+        FindParent(directory, source, result, new HashSet<Guid> { directory.Id });
         result.Reverse();
         return result;
     }
 
-    private static void FindChildren(List<DirectoryDescriptorInfoDto> list, DirectoryDescriptorInfoDto directory)
+    private static void FindChildren(List<DirectoryDescriptorInfoDto> list, DirectoryDescriptorInfoDto directory, HashSet<Guid> visited)
     {
         if (directory.Children != null && directory.Children.Any())
         {
             foreach (var c in directory.Children)
             {
+                if (!visited.Add(c.Id))
+                {
+                    continue;
+                }
+
                 list.Add(c);
-                FindChildren(list, c);
+                FindChildren(list, c, visited);
             }
         }
     }
 
-    private static void AddChildren(DirectoryDescriptorInfoDto parent, IReadOnlyList<DirectoryDescriptorInfoDto> list)
+    private static void AddChildren(DirectoryDescriptorInfoDto parent, IReadOnlyList<DirectoryDescriptorInfoDto> list, HashSet<Guid> visited)
     {
         var children = list.Where(p => p.ParentId == parent.Id).ToList();
         if (children.Any())
         {
             foreach (var ou in children)
             {
+                if (!visited.Add(ou.Id))
+                {
+                    continue;
+                }
+
                 parent.AddChild(ou);
-                AddChildren(ou, list);
+                AddChildren(ou, list, visited);
             }
         }
     }
 
-    private static void FindParent(DirectoryDescriptorInfoDto directory, IEnumerable<DirectoryDescriptorInfoDto> source, List<DirectoryDescriptorInfoDto> result)
+    private static void FindParent(DirectoryDescriptorInfoDto directory, IEnumerable<DirectoryDescriptorInfoDto> source, List<DirectoryDescriptorInfoDto> result, HashSet<Guid> visited)
     {
         if (directory.ParentId.HasValue)
         {
             var parent = source.FindById(directory.ParentId.Value);
-            if (parent != null)
+            if (parent != null && visited.Add(parent.Id))
             {
                 result.Add(parent);
-                FindParent(parent, source, result);
+                FindParent(parent, source, result, visited);
             }
         }
     }

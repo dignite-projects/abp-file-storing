@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dignite.Abp.FileStoring;
+using Volo.Abp;
 using Volo.Abp.Domain.Services;
 
 namespace Dignite.FileExplorer.Directories;
@@ -47,6 +49,11 @@ public class DirectoryManager : DomainService
             {
                 throw new DirectoryInvalidMoveException();
             }
+
+            if (await IsDescendantOrSelfAsync(directory.Id, parent))
+            {
+                throw new BusinessException(FileExplorerErrorCodes.Directories.ForbidMovingToChild);
+            }
         }
 
         var children = await DirectoryDescriptorRepository.GetListAsync(directory.CreatorId.Value, directory.ContainerName, parentId);
@@ -59,6 +66,27 @@ public class DirectoryManager : DomainService
         directory.ParentId = parentId;
         directory.Order = order;
         return await DirectoryDescriptorRepository.UpdateAsync(directory);
+    }
+
+    private async Task<bool> IsDescendantOrSelfAsync(Guid directoryId, DirectoryDescriptor parent)
+    {
+        var visited = new HashSet<Guid>();
+        var current = parent;
+
+        while (true)
+        {
+            if (current.Id == directoryId || !visited.Add(current.Id))
+            {
+                return true;
+            }
+
+            if (!current.ParentId.HasValue)
+            {
+                return false;
+            }
+
+            current = await DirectoryDescriptorRepository.GetAsync(current.ParentId.Value);
+        }
     }
 
     public virtual async Task<DirectoryDescriptor> UpdateAsync(DirectoryDescriptor directory, string name)
