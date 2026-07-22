@@ -18,7 +18,9 @@
     <Project Path="file-explorer/src/Dignite.FileExplorer.HttpApi/Dignite.FileExplorer.HttpApi.csproj" />
     <Project Path="file-explorer/src/Dignite.FileExplorer.MongoDB/Dignite.FileExplorer.MongoDB.csproj" />
   </Folder>
-  <Folder Name="/file-explorer/test/" />
+  <Folder Name="/file-explorer/test/">
+    <Project Path="file-explorer/test/Dignite.FileExplorer.DirectorySafety.Tests/Dignite.FileExplorer.DirectorySafety.Tests.csproj" />
+  </Folder>
   <Folder Name="/host/">
     <Project Path="host/Dignite.FileExplorer.Web.Host/Dignite.FileExplorer.Web.Host.csproj" />
   </Folder>
