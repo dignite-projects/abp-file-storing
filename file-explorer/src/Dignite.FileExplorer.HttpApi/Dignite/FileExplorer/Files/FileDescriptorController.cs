@@ -26,6 +26,7 @@ public class FileDescriptorController : AbpController, IFileDescriptorAppService
     }
         
     [HttpPost]
+    [TypeFilter(typeof(FileUploadSizeLimitFilter))]
     public async Task<FileDescriptorDto> CreateAsync(CreateFileInput input)
     {
         var file = await _fileAppService.CreateAsync(input);

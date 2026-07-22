@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Dignite.FileExplorer.Application.Contracts\Dignite.FileExplorer.Application.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\core\src\Dignite.Abp.FileStoring\Dignite.Abp.FileStoring.csproj" />
   </ItemGroup>
 
 </Project>

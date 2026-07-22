@@ -15,10 +15,19 @@ public class FileStoringHandler_Tests
     {
         var configuration = CreateConfiguration();
         configuration.AddFileSizeLimitHandler(options => options.MaxFileSize = 1);
-        var stream = new MemoryStream(new byte[2048]);
+        var stream = new MemoryStream(new byte[(1 * 1024 * 1024) + 1]);
         var context = new FileHandlerContext("avatar.png", "image/png", stream, configuration);
 
         await Should.ThrowAsync<BusinessException>(() => new FileSizeLimitHandler().ExecuteAsync(context));
+    }
+
+    [Fact]
+    public void FileSizeLimitHandler_Should_Reject_Invalid_Configuration()
+    {
+        var configuration = CreateConfiguration();
+
+        Should.Throw<System.ArgumentOutOfRangeException>(() =>
+            configuration.AddFileSizeLimitHandler(options => options.MaxFileSize = 0));
     }
 
     [Fact]

@@ -89,9 +89,14 @@ public class FileDescriptorManager : DomainService
         [NotNull] FileDescriptor file,
         [NotNull] IRemoteStreamContent remoteStream)
     {
+        var maxFileSizeInBytes = _blobContainerConfigurationProvider
+            .Get(file.ContainerName)
+            .GetFileSizeLimitConfiguration()
+            .MaxFileSizeInBytes;
+
         using (var ms = new MemoryStream())
         {
-            await remoteStream.GetStream().CopyToAsync(ms);
+            await CopyToAsync(remoteStream.GetStream(), ms, maxFileSizeInBytes);
             ms.Position = 0;
             return await CreateAsync(file, ms, true);
         }
@@ -264,6 +269,35 @@ public class FileDescriptorManager : DomainService
             {
                 throw new FileCellNameNotFoundException();
             }
+        }
+    }
+
+    private static async Task CopyToAsync(Stream source, Stream destination, long maxFileSizeInBytes)
+    {
+        if (maxFileSizeInBytes <= 0)
+        {
+            await source.CopyToAsync(destination);
+            return;
+        }
+
+        var buffer = new byte[81920];
+        long totalBytes = 0;
+        int bytesRead;
+
+        while ((bytesRead = await source.ReadAsync(buffer.AsMemory())) > 0)
+        {
+            totalBytes += bytesRead;
+            if (totalBytes > maxFileSizeInBytes)
+            {
+                var maxFileSizeInMegabytes = maxFileSizeInBytes / (1024 * 1024);
+                throw new BusinessException(
+                    code: FileErrorCodes.Files.FileTooLarge,
+                    message: "File object is too large",
+                    details: $"The file object size cannot exceed {maxFileSizeInMegabytes} MB!"
+                );
+            }
+
+            await destination.WriteAsync(buffer.AsMemory(0, bytesRead));
         }
     }
 
