@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-this-alias */
 /* eslint-disable @angular-eslint/component-selector */
 import {
   AfterContentInit,
@@ -18,7 +17,6 @@ import { NzFormatBeforeDropEvent } from 'ng-zorro-antd/tree';
 import { finalize, map, of, tap } from 'rxjs';
 import { LocalizationService } from '@abp/ng.core';
 import { ValidatorsService } from '../../services/validators.service';
-let that;
 @Component({
   
   standalone: false,selector: 'fe-file-modal-tree',
@@ -32,9 +30,7 @@ export class FileModalTreeComponent implements AfterContentInit {
     private toaster: ToasterService,
     public _LocalizationService: LocalizationService,
     private confirmation: ConfirmationService,
-  ) {
-    that = this;
-  }
+  ) {}
 
   /**文件分组列表 */
   fileGroupList: any[] = [];
@@ -145,8 +141,8 @@ export class FileModalTreeComponent implements AfterContentInit {
         order = Math.max(0, node.origin.order - 1);
       }
       // 统一处理移动逻辑
-      return that._DescriptorService.move(dragNode.key, { parentId, order }).pipe(
-        tap(() => that.getFileGroupList()),
+      return this._DescriptorService.move(dragNode.key, { parentId, order }).pipe(
+        tap(() => this.getFileGroupList()),
         map(() => true)
       );
     }
