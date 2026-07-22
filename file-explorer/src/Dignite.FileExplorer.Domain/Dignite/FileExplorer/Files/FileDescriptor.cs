@@ -1,5 +1,7 @@
 using System;
+using Dignite.Abp.FileStoring;
 using Volo.Abp.Auditing;
+using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.MultiTenancy;
 
@@ -17,9 +19,9 @@ public class FileDescriptor : AggregateRoot<Guid>, ICreationAuditedObject, IDele
         BlobName = blobName;
         Name = name;
         MimeType = mimeType;
-        CellName = cellName;
+        CellName = cellName ?? string.Empty;
         DirectoryId = directoryId;
-        EntityId = entityId;
+        EntityId = entityId ?? string.Empty;
         TenantId = tenantId;
     }
 
@@ -29,20 +31,20 @@ public class FileDescriptor : AggregateRoot<Guid>, ICreationAuditedObject, IDele
 
     public long Size { get; protected set; }
 
-    public string Name { get; set; } = default!;
+    public string Name { get; protected set; } = default!;
 
     public string MimeType { get; protected set; } = default!;
 
-    public string Md5 { get; protected set; } = default!;
+    public string Md5 { get; protected set; } = string.Empty;
 
-    public string ReferBlobName { get; protected set; } = default!;
+    public string ReferBlobName { get; protected set; } = string.Empty;
 
-    public string CellName { get; set; }
+    public string CellName { get; protected set; }
 
     /// <summary>
     /// Directory in container
     /// </summary>
-    public Guid? DirectoryId { get; set; }
+    public Guid? DirectoryId { get; protected set; }
 
     /// <summary>
     /// Associated Entity Id
@@ -72,5 +74,20 @@ public class FileDescriptor : AggregateRoot<Guid>, ICreationAuditedObject, IDele
     public void SetSize(long size)
     {
         Size = size;
+    }
+
+    public void Rename(string name)
+    {
+        Name = Check.Length(name, nameof(name), FileConsts.MaxNameLength) ?? string.Empty;
+    }
+
+    public void MoveToDirectory(Guid? directoryId)
+    {
+        DirectoryId = directoryId;
+    }
+
+    public void SetCell(string cellName)
+    {
+        CellName = Check.Length(cellName, nameof(cellName), FileDescriptorConsts.MaxCellNameLength) ?? string.Empty;
     }
 }
