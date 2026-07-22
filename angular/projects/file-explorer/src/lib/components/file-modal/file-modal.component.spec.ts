@@ -1,6 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { FileModalComponent } from './file-modal.component';
+import { FileExplorerModule } from '../../file-explorer.module';
+import { CoreTestingModule } from '@abp/ng.core/testing';
+import { NgxValidateCoreModule } from '@ngx-validate/core';
 
 describe('FileModalComponent', () => {
   let component: FileModalComponent;
@@ -8,7 +11,7 @@ describe('FileModalComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [FileModalComponent]
+      imports: [FileExplorerModule, CoreTestingModule.withConfig(), NgxValidateCoreModule.forRoot()]
     });
     fixture = TestBed.createComponent(FileModalComponent);
     component = fixture.componentInstance;
