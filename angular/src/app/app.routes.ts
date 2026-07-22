@@ -17,4 +17,8 @@ export const APP_ROUTES: Routes = [
     path: 'setting-management',
     loadChildren: () => import('@abp/ng.setting-management').then(c => c.createRoutes()),
   },
+  {
+    path: 'file',
+    loadChildren: () => import('@dignite-ng/expand.file-explorer').then(m => m.FileExplorerModule),
+  },
 ];

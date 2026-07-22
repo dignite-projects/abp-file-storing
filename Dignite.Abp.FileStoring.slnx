@@ -19,5 +19,7 @@
     <Project Path="file-explorer/src/Dignite.FileExplorer.MongoDB/Dignite.FileExplorer.MongoDB.csproj" />
   </Folder>
   <Folder Name="/file-explorer/test/" />
-  <Folder Name="/host/" />
+  <Folder Name="/host/">
+    <Project Path="host/Dignite.FileExplorer.Web.Host/Dignite.FileExplorer.Web.Host.csproj" />
+  </Folder>
 </Solution>
