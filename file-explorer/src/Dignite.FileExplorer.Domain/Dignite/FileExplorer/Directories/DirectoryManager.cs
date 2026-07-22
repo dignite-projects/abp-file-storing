@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dignite.Abp.FileStoring;
+using Dignite.FileExplorer.Files;
 using Volo.Abp;
 using Volo.Abp.Domain.Services;
 
@@ -12,11 +13,42 @@ public class DirectoryManager : DomainService
 {
     protected ContainerNameValidator ContainerNameValidator { get; }
     protected IDirectoryDescriptorRepository DirectoryDescriptorRepository { get; }
+    protected IFileDescriptorRepository FileDescriptorRepository { get; }
 
-    public DirectoryManager(IDirectoryDescriptorRepository directoryDescriptorRepository, ContainerNameValidator containerNameValidator)
+    public DirectoryManager(
+        IDirectoryDescriptorRepository directoryDescriptorRepository,
+        ContainerNameValidator containerNameValidator,
+        IFileDescriptorRepository fileDescriptorRepository = null)
     {
         DirectoryDescriptorRepository = directoryDescriptorRepository;
         ContainerNameValidator = containerNameValidator;
+        FileDescriptorRepository = fileDescriptorRepository;
+    }
+
+    /// <summary>
+    /// Directories must be empty before deletion. Children and files are not cascaded or reparented.
+    /// </summary>
+    public virtual async Task EnsureEmptyAsync(DirectoryDescriptor directory)
+    {
+        if (!directory.CreatorId.HasValue || FileDescriptorRepository == null)
+        {
+            throw new DirectoryNotEmptyException();
+        }
+
+        var childDirectories = await DirectoryDescriptorRepository.GetListAsync(
+            directory.CreatorId.Value,
+            directory.ContainerName,
+            directory.Id);
+        var files = await FileDescriptorRepository.GetListAsync(
+            directory.ContainerName,
+            null,
+            directory.Id,
+            maxResultCount: 1);
+
+        if (childDirectories == null || files == null || childDirectories.Count != 0 || files.Count != 0)
+        {
+            throw new DirectoryNotEmptyException();
+        }
     }
 
     public virtual async Task<DirectoryDescriptor> CreateAsync(Guid userId, string containerName, string name, Guid? parentId = null)

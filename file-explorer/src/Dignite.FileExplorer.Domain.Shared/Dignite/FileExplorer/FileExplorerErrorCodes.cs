@@ -9,6 +9,7 @@ public static class FileExplorerErrorCodes
         public const string InvalidDirectoryName = "FileExplorer.Directory:0003";
         public const string InvalidMove = "FileExplorer.Directory:0004";
         public const string ForbidMovingToChild = "FileExplorer.Directory:0005";
+        public const string DirectoryNotEmpty = "FileExplorer.Directory:0006";
     }
     public static class Files
     {

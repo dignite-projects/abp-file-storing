@@ -41,6 +41,7 @@ public class DirectoryDescriptorAppService : FileExplorerAppService, IDirectoryD
     {
         var entity = await _directoryRepository.GetAsync(id);
         await AuthorizationService.CheckAsync(entity, CommonOperations.Delete);
+        await _directoryManager.EnsureEmptyAsync(entity);
         await _directoryRepository.DeleteAsync(entity);
     }
 
