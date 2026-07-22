@@ -4,10 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Dignite.Abp.FileStoring;
+using Dignite.Abp.FileStoring.Imaging;
 using Dignite.FileExplorer.Directories;
 using Dignite.FileExplorer.Permissions;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Caching.Memory;
+using SixLabors.ImageSharp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.BlobStoring;
@@ -19,12 +22,23 @@ namespace Dignite.FileExplorer.Files;
 
 public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppService
 {
+    private const int MaxResizeDimension = 4096;
+    private const long MaxResizePixelCount = 16_000_000;
+    private const int MaxDecompressionRatio = 100;
+    private const int DecodeTimeoutSeconds = 10;
+    private const int MaxCachedImageBytes = 8 * 1024 * 1024;
+    private static readonly IMemoryCache FallbackImageResizeCache = new MemoryCache(new MemoryCacheOptions
+    {
+        SizeLimit = 64 * 1024 * 1024
+    });
+
     private readonly IFileDescriptorRepository _fileRepository;
     private readonly IDirectoryDescriptorRepository _directoryRepository;
     private readonly FileDescriptorManager _fileManager;
     private readonly IBlobContainerFactory _blobContainerFactory;
     private readonly IBlobContainerConfigurationProvider _blobContainerConfigurationProvider;
     private readonly IImageResizer _imageResizer;
+    private readonly IMemoryCache _imageResizeCache;
 
     public FileDescriptorAppService(
         IFileDescriptorRepository blobRepository,
@@ -32,7 +46,8 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         FileDescriptorManager fileManager,
         IBlobContainerFactory blobContainerFactory,
         IBlobContainerConfigurationProvider blobContainerConfigurationProvider,
-        IImageResizer imageResizer)
+        IImageResizer imageResizer,
+        IMemoryCache imageResizeCache = null)
     {
         _fileRepository = blobRepository;
         _directoryRepository = directoryRepository;
@@ -40,6 +55,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         _blobContainerFactory = blobContainerFactory;
         _blobContainerConfigurationProvider = blobContainerConfigurationProvider;
         _imageResizer = imageResizer;
+        _imageResizeCache = imageResizeCache ?? FallbackImageResizeCache;
     }
 
     [Authorize]
@@ -165,20 +181,92 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
 
             if (stream != null)
             {
-                if (imageResize!=null && (imageResize.Width>0 || imageResize.Height>0))
+                if (imageResize != null && (imageResize.Width > 0 || imageResize.Height > 0))
                 {
-                    if (ImageFormatHelper.IsValidImage(entity.MimeType, ImageFormatHelper.AllowedImageUploadFormats))
+                    if ((imageResize.Width ?? 0) > MaxResizeDimension ||
+                        (imageResize.Height ?? 0) > MaxResizeDimension)
                     {
+                        throw new BusinessException(
+                            code: FileStoringImagingErrorCodes.ImageResizeDimensionsTooLarge,
+                            message: $"Image resize dimensions cannot exceed {MaxResizeDimension} pixels."
+                        );
+                    }
+
+                    if (!stream.CanSeek)
+                    {
+                        throw new BusinessException(
+                            code: FileStoringImagingErrorCodes.ImageResizeFailure,
+                            message: "Image stream must support seeking."
+                        );
+                    }
+
+                    var imageInfo = await IdentifyImageAsync(stream);
+                    var detectedFormat = imageInfo?.Metadata.DecodedImageFormat;
+                    if (detectedFormat != null &&
+                        ImageFormatHelper.IsValidImage(detectedFormat.DefaultMimeType, ImageFormatHelper.AllowedImageUploadFormats))
+                    {
+                        var detectedImageInfo = imageInfo!;
+                        var totalPixels = (long)detectedImageInfo.Width * detectedImageInfo.Height;
+                        if (detectedImageInfo.Width > MaxResizeDimension ||
+                            detectedImageInfo.Height > MaxResizeDimension ||
+                            totalPixels > MaxResizePixelCount ||
+                            stream.Length > 0 && totalPixels / (double)stream.Length > MaxDecompressionRatio)
+                        {
+                            throw new BusinessException(
+                                code: FileStoringImagingErrorCodes.ImageTooLarge,
+                                message: "The image is too large to resize safely."
+                            );
+                        }
+
+                        var cacheKey = $"file-resize:{entity.TenantId}:{containerName}:{blobName}:{entity.Md5}:{imageResize.Width}:{imageResize.Height}";
+                        if (_imageResizeCache.TryGetValue<byte[]>(cacheKey, out var cachedImage) && cachedImage is not null)
+                        {
+                            return new RemoteStreamContent(
+                                new MemoryStream(cachedImage, writable: false),
+                                entity.Name,
+                                detectedFormat.DefaultMimeType,
+                                cachedImage.LongLength,
+                                true);
+                        }
+
+                        stream.Position = 0;
                         var result = await _imageResizer.ResizeAsync(
-                        stream,
-                        new ImageResizeArgs(imageResize.Width > 0 ? (uint)imageResize.Width : null, imageResize.Height > 0 ? (uint)imageResize.Height : null, ImageResizeMode.Crop),
-                        entity?.MimeType
+                            stream,
+                            new ImageResizeArgs(
+                                imageResize.Width > 0 ? (uint)imageResize.Width : null,
+                                imageResize.Height > 0 ? (uint)imageResize.Height : null,
+                                ImageResizeMode.Crop),
+                            detectedFormat.DefaultMimeType
                         );
 
-                        if (result.State == ImageProcessState.Done)
+                        if ((result.State == ImageProcessState.Done ||
+                             result.Result is not null && result.Result.CanRead) && result.Result is not null)
                         {
-                            stream = result.Result;
+                            var resizedBytes = await ReadStreamAsync(result.Result, MaxResizePixelCount * 4);
+                            if (resizedBytes.Length <= MaxCachedImageBytes)
+                            {
+                                _imageResizeCache.Set(
+                                    cacheKey,
+                                    resizedBytes,
+                                    new MemoryCacheEntryOptions
+                                    {
+                                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+                                        Size = resizedBytes.LongLength
+                                    });
+                            }
+
+                            return new RemoteStreamContent(
+                                new MemoryStream(resizedBytes, writable: false),
+                                entity.Name,
+                                detectedFormat.DefaultMimeType,
+                                resizedBytes.LongLength,
+                                true);
                         }
+
+                        throw new BusinessException(
+                            code: FileStoringImagingErrorCodes.ImageResizeFailure,
+                            message: result.State.ToString()
+                        );
                     }
                 }
 
@@ -186,6 +274,56 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
             }
         }
         return null;
+    }
+
+    private static async Task<ImageInfo> IdentifyImageAsync(Stream stream)
+    {
+        using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(DecodeTimeoutSeconds));
+        try
+        {
+            stream.Position = 0;
+            var result = await Image.IdentifyAsync(stream, timeout.Token);
+            stream.Position = 0;
+            return result!;
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+        {
+            throw new BusinessException(
+                code: FileStoringImagingErrorCodes.ImageDecodeTimeout,
+                message: "Image decoding timed out."
+            );
+        }
+        catch (ImageFormatException exception)
+        {
+            throw new BusinessException(
+                code: FileStoringImagingErrorCodes.ImageFormatNotSupported,
+                message: "The image content is invalid.",
+                details: exception.Message
+            );
+        }
+    }
+
+    private static async Task<byte[]> ReadStreamAsync(Stream source, long maxBytes)
+    {
+        using var output = new MemoryStream();
+        var buffer = new byte[81920];
+        long totalBytes = 0;
+        int bytesRead;
+        while ((bytesRead = await source.ReadAsync(buffer.AsMemory())) > 0)
+        {
+            totalBytes += bytesRead;
+            if (totalBytes > maxBytes)
+            {
+                throw new BusinessException(
+                    code: FileStoringImagingErrorCodes.ImageTooLarge,
+                    message: "The resized image is too large."
+                );
+            }
+
+            await output.WriteAsync(buffer.AsMemory(0, bytesRead));
+        }
+
+        return output.ToArray();
     }
 
     /// <summary>

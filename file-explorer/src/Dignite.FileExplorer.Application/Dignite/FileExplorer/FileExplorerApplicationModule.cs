@@ -22,6 +22,7 @@ public class FileExplorerApplicationModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         context.Services.AddAutoMapperObjectMapper<FileExplorerApplicationModule>();
+        context.Services.AddMemoryCache(options => options.SizeLimit = 64 * 1024 * 1024);
         Configure<AbpAutoMapperOptions>(options =>
         {
             options.AddMaps<FileExplorerApplicationModule>(validate: true);
