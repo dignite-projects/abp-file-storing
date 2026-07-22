@@ -78,4 +78,43 @@ public abstract class FileDescriptorRepository_Tests<TStartupModule> : FileExplo
 
         results.All(result => result).ShouldBeTrue();
     }
+
+    [Fact]
+    public async Task GetListAsync_ShouldOrderByCreationTimeDescendingByDefault()
+    {
+        var containerName = "sort-direction-" + Guid.NewGuid().ToString("N");
+        var olderFile = CreateFileDescriptor(containerName, "older");
+        olderFile.CreationTime = DateTime.UtcNow.AddMinutes(-1);
+
+        var newerFile = CreateFileDescriptor(containerName, "newer");
+        newerFile.CreationTime = DateTime.UtcNow;
+
+        await _fileDescriptorRepository.InsertAsync(olderFile, autoSave: true);
+        await _fileDescriptorRepository.InsertAsync(newerFile, autoSave: true);
+
+        var result = await _fileDescriptorRepository.GetListAsync(
+            containerName,
+            null,
+            null,
+            maxResultCount: 2);
+
+        result.Select(file => file.Name).ShouldBe(new[] { "newer", "older" });
+    }
+
+    private static FileDescriptor CreateFileDescriptor(string containerName, string name)
+    {
+        var file = new FileDescriptor(
+            Guid.NewGuid(),
+            containerName,
+            Guid.NewGuid().ToString("N"),
+            name,
+            "text/plain",
+            string.Empty,
+            null,
+            string.Empty,
+            null);
+        file.SetMd5(Guid.NewGuid().ToString("N"));
+        file.SetReferBlobName(string.Empty);
+        return file;
+    }
 }
