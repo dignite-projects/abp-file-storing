@@ -90,17 +90,17 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
 
         if (input.DirectoryId.HasValue)
         {
-            entity.DirectoryId = input.DirectoryId;
+            entity.MoveToDirectory(input.DirectoryId);
         }
 
         if (input.Name != null)
         {
-            entity.Name = input.Name;
+            entity.Rename(input.Name);
         }
 
         if (input.CellName != null)
         {
-            entity.CellName = input.CellName;
+            entity.SetCell(input.CellName);
         }
 
         await AuthorizationService.CheckAsync(entity, CommonOperations.Update);
