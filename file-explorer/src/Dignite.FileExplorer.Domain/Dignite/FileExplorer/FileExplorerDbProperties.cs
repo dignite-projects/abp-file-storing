@@ -3,9 +3,9 @@ namespace Dignite.FileExplorer;
 public static class FileExplorerDbProperties
 {
     /// <summary>
-    /// Default value: "Fep".
+    /// Default value: "Fe".
     /// </summary>
-    public static string DbTablePrefix { get; set; } = "Fep";
+    public static string DbTablePrefix { get; set; } = "Fe";
 
     /// <summary>
     /// Default value: "null".
