@@ -43,6 +43,22 @@ jobs:
       - name: Restore
         run: dotnet restore Dignite.Abp.FileStoring.slnx
 
+      # Mirrors the release gate so new high/critical vulnerabilities surface on the PR that
+      # introduces them instead of only at release time. Keep the allowlist in sync with
+      # release.yml.
+      - name: Block vulnerable NuGet dependencies
+        shell: bash
+        run: |
+          set -o pipefail
+          report="$(dotnet list Dignite.Abp.FileStoring.slnx package --vulnerable --include-transitive)"
+          printf '%s\n' "$report"
+          # Mirrors the release gate; see release.yml for the remediation rationale. No advisories are
+          # allowlisted - if an unavoidable one reappears, filter it with a documented `grep -Ev`.
+          if printf '%s\n' "$report" | grep -Eiq '^\s*>\s+[^[:space:]]+\s+[^[:space:]]+\s+(high|critical)\b'; then
+            echo "::error::High or critical NuGet vulnerabilities block CI."
+            exit 1
+          fi
+
       # Includes host/Dignite.FileExplorer.Web.Host (the local dev/demo host) - it opts out of
       # central package management in common.props since it pins its own inline package versions.
       - name: Build

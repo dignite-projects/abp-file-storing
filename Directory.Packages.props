@@ -2,7 +2,23 @@
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Lets the security pins below override versions that ABP / EF Core resolve transitively. -->
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
+
+  <!--
+    Security pins for vulnerable transitive dependencies. Microsoft.EntityFrameworkCore.Sqlite
+    (via Volo.Abp.EntityFrameworkCore.Sqlite 10.5.0) still bundles SQLitePCLRaw 2.1.11, which
+    ships a SQLite older than 3.50.2 (GHSA-2m69-gcr7-jv3q / CVE-2025-6965). 2.1.12 is the first
+    build past that advisory; pin the whole family so they stay on one version. Remove once the
+    EF Core SQLite provider rolls its bundle forward on its own.
+  -->
+  <ItemGroup Label="Security-patched transitive dependencies">
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.12" />
+    <PackageVersion Include="SQLitePCLRaw.core" Version="2.1.12" />
+    <PackageVersion Include="SQLitePCLRaw.provider.e_sqlite3" Version="2.1.12" />
+  </ItemGroup>
 
   <ItemGroup Label="ABP 10.5.0">
     <PackageVersion Include="Volo.Abp.Core" Version="10.5.0" />
@@ -17,7 +33,7 @@
     <PackageVersion Include="Volo.Abp.Authorization.Abstractions" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Http.Client" Version="10.5.0" />
-    <PackageVersion Include="Volo.Abp.AutoMapper" Version="10.5.0" />
+    <PackageVersion Include="Volo.Abp.Mapperly" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.EntityFrameworkCore" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.EntityFrameworkCore.Sqlite" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.MongoDB" Version="10.5.0" />
