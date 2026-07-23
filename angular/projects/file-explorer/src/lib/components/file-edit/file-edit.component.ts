@@ -1,6 +1,6 @@
 /* eslint-disable @angular-eslint/component-selector */
 import { Component, ElementRef, EventEmitter, Input, OnDestroy, Output, ViewChild } from '@angular/core';
-import { GetImageLacolBase64urlService } from '../../services/get-image-lacol-base64url.service';
+import { ObjectUrlService } from '../../services/object-url.service';
 import { FormatFileSizePipe } from '../../pipe/format-file-size.pipe';
 
 @Component({
@@ -12,7 +12,7 @@ import { FormatFileSizePipe } from '../../pipe/format-file-size.pipe';
 export class FileEditComponent implements OnDestroy {
   constructor(
     public _FormatFileSizePipe: FormatFileSizePipe,
-    private _GetImageLacolBase64urlService: GetImageLacolBase64urlService,
+    private _objectUrlService: ObjectUrlService,
   ) {}
 
   /**是否多选 */
@@ -99,7 +99,7 @@ export class FileEditComponent implements OnDestroy {
       fileItem.fileSize = this._FormatFileSizePipe.transform(fileItem.size);
       // Use a browser-managed object URL instead of retaining a base64 copy in memory.
       if (!previewItem.src && fileItem instanceof Blob) {
-        previewItem.src = this._GetImageLacolBase64urlService.get(fileItem);
+        previewItem.src = this._objectUrlService.get(fileItem);
         this.previewObjectUrls.add(previewItem.src);
       }
     }

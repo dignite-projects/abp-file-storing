@@ -8,7 +8,7 @@ carries **local-dev-only demo apps that are never packed/published** — `host/`
 scaffolded by ABP Studio) and `angular/`'s demo app — that exist solely to run/demo the stack end-to-end. A real
 consuming application brings its own host; `host/` and `angular/` are this repo's own smoke test / live
 documentation, not that host. The code was **extracted from `dignite-abp`** (treated as a frozen source); the
-repo is at `10.0.0-rc.1` with a known remediation backlog (see `PROJECT-AUDIT-REPORT.md`).
+repo is at `10.0.0-rc.1`; its audit remediation backlog is tracked in the closed `audit`-labeled issues (#2–#35).
 
 ## Tech stack
 
@@ -127,12 +127,13 @@ no migration step or local database install.
 ## Design rationale
 
 Usage and the architecture overview live in the root `README.md`. The "why" behind the hard invariants lives
-inline in `.claude/rules/framework/common/file-storing-invariants.md`; a standing snapshot of known gaps and the
-remediation plan lives in `PROJECT-AUDIT-REPORT.md`. Many invariants encode bugs the #45–#70 fix pass already
-resolved — don't reintroduce them.
+inline in `.claude/rules/framework/common/file-storing-invariants.md`; the residual known limitations are noted
+inline in the code (the concurrent-dedup and orphan-blob comments in `FileDescriptorManager`), and the audit
+remediation is tracked in the closed `audit`-labeled issues (#2–#35). Many invariants encode bugs the #45–#70
+fix pass already resolved — don't reintroduce them.
 
 <!-- .claude/rules/ adapted from ../abp-notifications — that repo's notification/notifier/distributed-event
      rules were rewritten for this repo's BlobStoring + IFileHandler + file-explorer architecture, and its
      "removed over-engineering" invariants were replaced with this repo's own (upload pipeline, blob/DB
      consistency, authorization, directory-tree integrity) derived from the code, the #45–#70 fixes, and
-     PROJECT-AUDIT-REPORT.md. -->
+     the `audit`-labeled issues #2–#35. -->

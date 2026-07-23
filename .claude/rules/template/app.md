@@ -184,5 +184,6 @@ so `dotnet test` needs no migration step or local database install.
 Usage and the architecture overview live in the root `README.md`. The hard architectural invariants — the
 handler pipeline running before storage, per-container blob-name uniqueness, blob/DB consistency, the
 authorization model, and DI-lifetime discipline — live in
-`framework/common/file-storing-invariants.md` (always loaded). A standing snapshot of known gaps and the
-remediation plan lives in the repo-root `PROJECT-AUDIT-REPORT.md`.
+`framework/common/file-storing-invariants.md` (always loaded). Residual known limitations are noted inline in
+the code (the concurrent-dedup and orphan-blob comments in `FileDescriptorManager`); the audit remediation is
+tracked in the closed `audit`-labeled issues (#2–#35).

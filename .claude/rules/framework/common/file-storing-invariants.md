@@ -2,8 +2,8 @@
 
 > This file has **no `paths:` frontmatter, so it always loads**, alongside `abp-core.md`, `versioning.md`, and
 > `template/app.md`. It encodes the rules the module must uphold: the ones the hardening fixes (issues #45–#70)
-> already established as "don't regress," plus the guarantees the standing audit
-> (`PROJECT-AUDIT-REPORT.md`) is driving toward. Where an invariant is **not yet fully enforced**, it says so —
+> already established as "don't regress," plus the guarantees the audit remediation
+> (the closed `audit`-labeled issues #2–#35) drove toward. Where an invariant is **not yet fully enforced**, it says so —
 > treat that as "the intended contract; don't make it worse, and close it when you touch that code."
 
 ## What this module is (and isn't)

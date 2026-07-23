@@ -25,6 +25,10 @@ public class FileDescriptorManager : DomainService
 
     private const int CompensationTimeoutSeconds = 30;
 
+    // Backstop cap for containers that do not configure a size limit, so a single upload
+    // cannot buffer unbounded memory. Containers needing larger uploads set their own MaxFileSize.
+    private const long DefaultMaxFileSizeInBytes = 100L * 1024 * 1024;
+
     public FileDescriptorManager(
         IFileDescriptorRepository fileDescriptorRepository,
         IBlobContainerFactory blobContainerFactory,
@@ -280,6 +284,15 @@ public class FileDescriptorManager : DomainService
         var stillReferenced = await _fileDescriptorRepository.ReferencingAnyAsync(file.ContainerName, blobName, cancellationToken);
         var stillOwned = isReference && await _fileDescriptorRepository.BlobNameExistsAsync(file.ContainerName, blobName, cancellationToken);
 
+        // Known limitation (orphan blobs): metadata is committed before the blob is deleted here, and
+        // the create path writes the blob before committing metadata. Caught failures are compensated,
+        // but a hard process crash (kill/OOM/power loss) in the window between the two writes can leave
+        // an orphan blob (unreferenced bytes) — never lost data, and the reference checks above ensure a
+        // still-referenced blob is never deleted. There is no background sweep to reclaim such orphans:
+        // ABP's IBlobContainer exposes no list/enumerate API, so blobs cannot be scanned against
+        // metadata, and a persistent pending-delete queue would cross this repo's "no new aggregate /
+        // no outbox" invariant. Reclaiming orphans, if ever needed, belongs to deployment-side tooling
+        // against the concrete storage backend.
         var blobDeleted = true;
         if (!stillReferenced && !stillOwned)
         {
@@ -354,11 +367,9 @@ public class FileDescriptorManager : DomainService
         long maxFileSizeInBytes,
         CancellationToken cancellationToken)
     {
-        if (maxFileSizeInBytes <= 0)
-        {
-            await source.CopyToAsync(destination, cancellationToken);
-            return;
-        }
+        // A container without an explicit size limit still gets a backstop cap rather than
+        // an unbounded copy into memory.
+        var effectiveLimit = maxFileSizeInBytes > 0 ? maxFileSizeInBytes : DefaultMaxFileSizeInBytes;
 
         var buffer = new byte[81920];
         long totalBytes = 0;
@@ -367,9 +378,9 @@ public class FileDescriptorManager : DomainService
         while ((bytesRead = await source.ReadAsync(buffer.AsMemory(), cancellationToken)) > 0)
         {
             totalBytes += bytesRead;
-            if (totalBytes > maxFileSizeInBytes)
+            if (totalBytes > effectiveLimit)
             {
-                var maxFileSizeInMegabytes = maxFileSizeInBytes / (1024 * 1024);
+                var maxFileSizeInMegabytes = effectiveLimit / (1024 * 1024);
                 throw new BusinessException(
                     code: FileErrorCodes.Files.FileTooLarge,
                     message: "File object is too large",
@@ -427,6 +438,16 @@ public class FileDescriptorManager : DomainService
         Stream stream,
         CancellationToken cancellationToken = default)
     {
+        // Content-dedup decision. This is a check-then-act against FindByMd5Async, so it is not
+        // race-free: two concurrent uploads of identical content in the same (tenant, container)
+        // can both miss here and both proceed to store. The (TenantId, ContainerName, Md5) filtered
+        // unique index is the real arbiter — the loser's InsertAsync then violates it, CreateAsync's
+        // catch compensates (removes the just-written blob/row), and it surfaces as a retriable error
+        // (a retry re-runs this method, now finds the winner, and dedups to a reference).
+        // Known limitation: the race loser is NOT converted to a reference in-request. Doing that
+        // safely needs a fresh unit of work for the retry (an EF DbContext is not reliably reusable
+        // after a failed SaveChanges); the current behavior is safe (no corruption, no orphan) but
+        // not graceful under a true simultaneous collision.
         var contentHash = stream.Sha256();
         var hashExistingFile = await _fileDescriptorRepository.FindByMd5Async(file.ContainerName, contentHash, cancellationToken);
         if (hashExistingFile == null || hashExistingFile.BlobName == file.BlobName)
