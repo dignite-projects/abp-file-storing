@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { FilePreviewComponent } from './file-preview.component';
-import { FileExplorerModule } from '../file-explorer.module';
 import { CoreTestingModule } from '@abp/ng.core/testing';
 import { NgxValidateCoreModule } from '@ngx-validate/core';
 
@@ -11,7 +10,7 @@ describe('FilePreviewComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [FileExplorerModule, CoreTestingModule.withConfig(), NgxValidateCoreModule.forRoot()]
+      imports: [FilePreviewComponent,CoreTestingModule.withConfig(), NgxValidateCoreModule.forRoot()]
     });
     fixture = TestBed.createComponent(FilePreviewComponent);
     component = fixture.componentInstance;

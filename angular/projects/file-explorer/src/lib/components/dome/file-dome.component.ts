@@ -1,11 +1,14 @@
 import { Component } from '@angular/core';
+import { FileEditComponent } from '../file-edit/file-edit.component';
+import { FilePickerComponent } from '../file-picker/file-picker.component';
 
 @Component({
   
-  standalone: false,// eslint-disable-next-line @angular-eslint/component-selector
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'fe-file-dome',
   templateUrl: './file-dome.component.html',
-  styleUrls: ['./file-dome.component.scss']
+  styleUrls: ['./file-dome.component.scss'],
+  imports: [FileEditComponent, FilePickerComponent],
 })
 export class FileDomeComponent {
 

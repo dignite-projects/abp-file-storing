@@ -42,7 +42,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Embedded static and localization resources">
-    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup Label="Test stack">

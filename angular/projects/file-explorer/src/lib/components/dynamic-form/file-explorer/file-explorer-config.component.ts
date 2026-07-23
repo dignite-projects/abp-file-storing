@@ -1,13 +1,15 @@
 import { ChangeDetectorRef, Component, ElementRef, inject, Input, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { CoreModule } from '@abp/ng.core';
 import { FileExplorerConfig } from './file-explorer-config';
 
 @Component({
   
-  standalone: false,// eslint-disable-next-line @angular-eslint/component-selector
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'fe-file-explorer-config',
   templateUrl: './file-explorer-config.component.html',
-  styleUrls: ['./file-explorer-config.component.scss']
+  styleUrls: ['./file-explorer-config.component.scss'],
+  imports: [ReactiveFormsModule, CoreModule],
 })
 export class FileExplorerConfigComponent {
   constructor(

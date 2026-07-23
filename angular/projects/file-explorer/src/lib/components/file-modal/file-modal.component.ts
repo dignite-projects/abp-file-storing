@@ -8,10 +8,11 @@ import {
   OnChanges,
 } from '@angular/core';
 import * as FileService from '../../proxy/dignite/file-explorer/files';
-import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
+import { Confirmation, ConfirmationService, ThemeSharedModule, ToasterService } from '@abp/ng.theme.shared';
 import {
   PagedResultDto,
   ABP,
+  CoreModule,
   ListService,
   Rest,
   RestService,
@@ -23,15 +24,31 @@ import {
   FileDescriptorService,
   GetFilesInput,
 } from '../../proxy/dignite/file-explorer/files';
-import { SelectionType } from '@swimlane/ngx-datatable';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { SelectionType, NgxDatatableModule } from '@swimlane/ngx-datatable';
+import { FormControl, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
+import { CommonModule } from '@angular/common';
+import { FileModalTreeComponent } from '../file-modal-tree/file-modal-tree.component';
+import { FilePreviewComponent } from '../../previews/file-preview.component';
+import { FormatFileSizePipe } from '../../pipe/format-file-size.pipe';
+import { GetDirectoryNamePipe } from '../../pipe/get-directory-name.pipe';
 @Component({
   
-  standalone: false,// eslint-disable-next-line @angular-eslint/component-selector
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'fe-file-modal',
   templateUrl: './file-modal.component.html',
   styleUrls: ['./file-modal.component.scss'],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    CoreModule,
+    ThemeSharedModule,
+    NgxDatatableModule,
+    FileModalTreeComponent,
+    FilePreviewComponent,
+    FormatFileSizePipe,
+    GetDirectoryNamePipe,
+  ],
   providers: [
     // [Required]
     ListService,

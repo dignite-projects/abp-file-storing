@@ -1,35 +1,39 @@
 <div class="input-group mb-3">
-    <input type="file" class="form-control" #fileEdit [multiple]="_multiple" (change)="getFileChange($event)">
+  <input type="file" class="form-control" #fileEdit [multiple]="_multiple" (change)="getFileChange($event)">
 </div>
 
-<table class="table" *ngIf="filesTableData.length>0">
+@if (filesTableData.length>0) {
+  <table class="table">
     <thead>
-        <tr>
-            <th scope="col"></th>
-            <th scope="col">{{'FileExplorer::FileName' | abpLocalization}}</th>
-            <th scope="col">{{'FileExplorer::FileSize' | abpLocalization}}</th>
-            <th scope="col"></th>
-        </tr>
+      <tr>
+        <th scope="col"></th>
+        <th scope="col">{{'FileExplorer::FileName' | abpLocalization}}</th>
+        <th scope="col">{{'FileExplorer::FileSize' | abpLocalization}}</th>
+        <th scope="col"></th>
+      </tr>
     </thead>
     <tbody>
-        <ng-container *ngFor="let item of filesTableData;let i =index">
-            <tr>
-                <td>
-                    <fe-file-preview [width]="'80px'" [src]="item.src" [name]="item.name" [type]="item.type" [preview]="true"></fe-file-preview>
-                </td>
-                <th scope="row">
-                    <div>{{item.name}}</div>
-                    <div class="form-text text-danger" *ngIf="item.size > sizeLimit">
-                        {{'FileExplorer::ExceedsMaximumSize' |
-                        abpLocalization:(sizeLimit|formatFileSize)}}</div>
-                </th>
-                <td>{{item.fileSize}}</td>
-                <td>
-                    <button class="btn btn-sm p-0 btn-light " (click.stop)="deleteFileTableItem(i,item)">
-                        <i class="fas fa-trash p-2"></i>
-                    </button>
-                </td>
-            </tr>
-        </ng-container>
+      @for (item of filesTableData; track item; let i = $index) {
+        <tr>
+          <td>
+            <fe-file-preview [width]="'80px'" [src]="item.src" [name]="item.name" [type]="item.type" [preview]="true"></fe-file-preview>
+          </td>
+          <th scope="row">
+            <div>{{item.name}}</div>
+            @if (item.size > sizeLimit) {
+              <div class="form-text text-danger">
+                {{'FileExplorer::ExceedsMaximumSize' |
+              abpLocalization:(sizeLimit|formatFileSize)}}</div>
+            }
+          </th>
+          <td>{{item.fileSize}}</td>
+          <td>
+            <button class="btn btn-sm p-0 btn-light " (click.stop)="deleteFileTableItem(i,item)">
+              <i class="fas fa-trash p-2"></i>
+            </button>
+          </td>
+        </tr>
+      }
     </tbody>
-</table>
+  </table>
+}

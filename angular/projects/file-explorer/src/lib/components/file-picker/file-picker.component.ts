@@ -1,12 +1,16 @@
 /* eslint-disable @angular-eslint/component-selector */
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
-import { moveItemInArray } from '@angular/cdk/drag-drop';
+import { DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CoreModule } from '@abp/ng.core';
+import { FileModalComponent } from '../file-modal/file-modal.component';
+import { FormatFileSizePipe } from '../../pipe/format-file-size.pipe';
 
 @Component({
   
-  standalone: false,selector: 'fe-file-picker',
+  selector: 'fe-file-picker',
   templateUrl: './file-picker.component.html',
-  styleUrls: ['./file-picker.component.scss']
+  styleUrls: ['./file-picker.component.scss'],
+  imports: [CoreModule, DragDropModule, FileModalComponent, FormatFileSizePipe],
 })
 export class FilePickerComponent implements OnChanges {
 

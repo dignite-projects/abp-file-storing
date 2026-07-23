@@ -9,19 +9,31 @@ import {
   Output,
   ViewChild,
 } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NzFormatEmitEvent, NzTreeNode } from 'ng-zorro-antd/tree';
 import * as DescriptorService from '../../proxy/dignite/file-explorer/directories';
-import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
+import { Confirmation, ConfirmationService, ThemeSharedModule, ToasterService } from '@abp/ng.theme.shared';
 import { NzFormatBeforeDropEvent } from 'ng-zorro-antd/tree';
 import { finalize, map, of, tap } from 'rxjs';
-import { LocalizationService } from '@abp/ng.core';
+import { CoreModule, LocalizationService } from '@abp/ng.core';
 import { ValidatorsService } from '../../services/validators.service';
+import { CommonModule } from '@angular/common';
+import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
+import { TreeModule } from '@abp/ng.components/tree';
 @Component({
   
-  standalone: false,selector: 'fe-file-modal-tree',
+  selector: 'fe-file-modal-tree',
   templateUrl: './file-modal-tree.component.html',
   styleUrls: ['./file-modal-tree.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    CoreModule,
+    ThemeSharedModule,
+    NgbDropdownModule,
+    TreeModule,
+  ],
 })
 export class FileModalTreeComponent implements AfterContentInit {
   constructor(

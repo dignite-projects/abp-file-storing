@@ -2,12 +2,16 @@
 import { Component, ElementRef, EventEmitter, Input, OnDestroy, Output, ViewChild } from '@angular/core';
 import { ObjectUrlService } from '../../services/object-url.service';
 import { FormatFileSizePipe } from '../../pipe/format-file-size.pipe';
+import { CoreModule } from '@abp/ng.core';
+import { FilePreviewComponent } from '../../previews/file-preview.component';
 
 @Component({
   
-  standalone: false,selector: 'fe-file-edit',
+  selector: 'fe-file-edit',
   templateUrl: './file-edit.component.html',
   styleUrls: ['./file-edit.component.scss'],
+  imports: [CoreModule, FilePreviewComponent, FormatFileSizePipe],
+  providers: [FormatFileSizePipe],
 })
 export class FileEditComponent implements OnDestroy {
   constructor(
