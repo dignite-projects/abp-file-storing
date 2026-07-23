@@ -3,7 +3,7 @@ import { Environment } from '@abp/ng.core';
 const baseUrl = 'http://localhost:4200';
 
 const oAuthConfig = {
-  issuer: 'https://localhost:44380/',
+  issuer: 'https://localhost:44390/',
   redirectUri: baseUrl,
   clientId: 'Host_App',
   responseType: 'code',
@@ -20,7 +20,7 @@ export const environment = {
   oAuthConfig,
   apis: {
     default: {
-      url: 'https://localhost:44380',
+      url: 'https://localhost:44390',
       rootNamespace: 'Dignite.FileExplorer',
     },
     AbpAccountPublic: {
