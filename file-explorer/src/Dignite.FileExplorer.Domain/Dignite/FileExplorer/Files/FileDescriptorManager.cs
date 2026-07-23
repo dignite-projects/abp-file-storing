@@ -257,29 +257,28 @@ public class FileDescriptorManager : DomainService
     {
         await OnDeletingEntityAsync(file);
 
-        await _fileDescriptorRepository.DeleteAsync(file, false, cancellationToken);
+        // autoSave: true - commit the metadata deletion before checking for remaining
+        // references. Otherwise this file's own row is still visible to the queries below
+        // (nothing has been flushed to the database yet) and it ends up counting itself as
+        // a reference, so the physical blob is never deleted even when this is the last one.
+        await _fileDescriptorRepository.DeleteAsync(file, true, cancellationToken);
 
-        if (file.ReferBlobName.IsNullOrEmpty())
+        var blobName = GetActualBlobName(file);
+        var isReference = !file.ReferBlobName.IsNullOrEmpty();
+
+        var stillReferenced = await _fileDescriptorRepository.ReferencingAnyAsync(file.ContainerName, blobName, cancellationToken);
+        var stillOwned = isReference && await _fileDescriptorRepository.BlobNameExistsAsync(file.ContainerName, blobName, cancellationToken);
+
+        var blobDeleted = true;
+        if (!stillReferenced && !stillOwned)
         {
-            if (!await _fileDescriptorRepository.ReferencingAnyAsync(file.ContainerName, file.BlobName, cancellationToken))
-            {
-                var blobContainer = _blobContainerFactory.Create(file.ContainerName);
-                return await blobContainer.DeleteAsync(file.BlobName, cancellationToken);
-            }
-        }
-        else
-        {
-            if (!await _fileDescriptorRepository.ReferencingAnyAsync(file.ContainerName, file.ReferBlobName, cancellationToken) &&
-                !await _fileDescriptorRepository.BlobNameExistsAsync(file.ContainerName, file.ReferBlobName, cancellationToken))
-            {
-                var blobContainer = _blobContainerFactory.Create(file.ContainerName);
-                return await blobContainer.DeleteAsync(file.ReferBlobName, cancellationToken);
-            }
+            var blobContainer = _blobContainerFactory.Create(file.ContainerName);
+            blobDeleted = await blobContainer.DeleteAsync(blobName, cancellationToken);
         }
 
         await OnDeletedEntityAsync(file);
 
-        return true;
+        return blobDeleted;
     }
 
     protected virtual Task OnCreatingEntityAsync([NotNull] FileDescriptor file)
