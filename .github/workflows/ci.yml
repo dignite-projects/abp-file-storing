@@ -52,12 +52,10 @@ jobs:
           set -o pipefail
           report="$(dotnet list Dignite.Abp.FileStoring.slnx package --vulnerable --include-transitive)"
           printf '%s\n' "$report"
-          # Advisories with no remediation available yet (upstream-controlled); see release.yml
-          # for the rationale. Re-check on every ABP/EF bump.
-          #   GHSA-rvv3-g6hj-g44x  AutoMapper 14.0.0 - patched only in 15.1.1 (incompatible major bump).
-          allowlist='GHSA-rvv3-g6hj-g44x'
-          if printf '%s\n' "$report" | grep -Ev "$allowlist" | grep -Eiq '^\s*>\s+[^[:space:]]+\s+[^[:space:]]+\s+(high|critical)\b'; then
-            echo "::error::High or critical NuGet vulnerabilities (outside the documented allowlist) block CI."
+          # Mirrors the release gate; see release.yml for the remediation rationale. No advisories are
+          # allowlisted - if an unavoidable one reappears, filter it with a documented `grep -Ev`.
+          if printf '%s\n' "$report" | grep -Eiq '^\s*>\s+[^[:space:]]+\s+[^[:space:]]+\s+(high|critical)\b'; then
+            echo "::error::High or critical NuGet vulnerabilities block CI."
             exit 1
           fi
 

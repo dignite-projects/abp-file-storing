@@ -33,7 +33,7 @@
     <PackageVersion Include="Volo.Abp.Authorization.Abstractions" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.Http.Client" Version="10.5.0" />
-    <PackageVersion Include="Volo.Abp.AutoMapper" Version="10.5.0" />
+    <PackageVersion Include="Volo.Abp.Mapperly" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.EntityFrameworkCore" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.EntityFrameworkCore.Sqlite" Version="10.5.0" />
     <PackageVersion Include="Volo.Abp.MongoDB" Version="10.5.0" />

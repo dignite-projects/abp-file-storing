@@ -79,15 +79,13 @@ jobs:
           set -o pipefail
           report="$(dotnet list Dignite.Abp.FileStoring.slnx package --vulnerable --include-transitive)"
           printf '%s\n' "$report"
-          # Advisories with no remediation available yet (upstream-controlled). Re-check on every
-          # ABP/EF bump and remove an entry once a compatible fix ships.
-          #   GHSA-rvv3-g6hj-g44x  AutoMapper 14.0.0 (via Volo.Abp.AutoMapper) - patched only in
-          #                        15.1.1, a major bump incompatible with ABP 10.5.0.
-          # (SQLitePCLRaw GHSA-2m69-gcr7-jv3q is remediated by the 2.1.12 pin in
-          #  Directory.Packages.props / the host project, so it is not allowlisted here.)
-          allowlist='GHSA-rvv3-g6hj-g44x'
-          if printf '%s\n' "$report" | grep -Ev "$allowlist" | grep -Eiq '^\s*>\s+[^[:space:]]+\s+[^[:space:]]+\s+(high|critical)\b'; then
-            echo "::error::High or critical NuGet vulnerabilities (outside the documented allowlist) block the release."
+          # Every known-vulnerable transitive dependency is currently remediated - pinned to a patched
+          # version (SQLitePCLRaw 2.1.12; MessagePack/OpenApi/Scriban in the host) or removed outright
+          # (AutoMapper, by mapping through Mapperly) - so the gate allows nothing through. If an
+          # unavoidable, upstream-controlled advisory reappears, filter it with a documented
+          # `grep -Ev '<GHSA-id>'` before this check and note why.
+          if printf '%s\n' "$report" | grep -Eiq '^\s*>\s+[^[:space:]]+\s+[^[:space:]]+\s+(high|critical)\b'; then
+            echo "::error::High or critical NuGet vulnerabilities block the release."
             exit 1
           fi
 
