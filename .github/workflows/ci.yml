@@ -43,6 +43,25 @@ jobs:
       - name: Restore
         run: dotnet restore Dignite.Abp.FileStoring.slnx
 
+      # Mirrors the release gate so new high/critical vulnerabilities surface on the PR that
+      # introduces them instead of only at release time. Keep the allowlist in sync with
+      # release.yml.
+      - name: Block vulnerable NuGet dependencies
+        shell: bash
+        run: |
+          set -o pipefail
+          report="$(dotnet list Dignite.Abp.FileStoring.slnx package --vulnerable --include-transitive)"
+          printf '%s\n' "$report"
+          # Advisories with no remediation available yet (upstream-controlled); see release.yml
+          # for the rationale. Re-check on every ABP/EF bump.
+          #   GHSA-rvv3-g6hj-g44x  AutoMapper 14.0.0 - patched only in 15.1.1 (incompatible major bump).
+          #   GHSA-2m69-gcr7-jv3q  SQLitePCLRaw.lib.e_sqlite3 2.1.11 - no patched release exists.
+          allowlist='GHSA-rvv3-g6hj-g44x|GHSA-2m69-gcr7-jv3q'
+          if printf '%s\n' "$report" | grep -Ev "$allowlist" | grep -Eiq '^\s*>\s+[^[:space:]]+\s+[^[:space:]]+\s+(high|critical)\b'; then
+            echo "::error::High or critical NuGet vulnerabilities (outside the documented allowlist) block CI."
+            exit 1
+          fi
+
       # Includes host/Dignite.FileExplorer.Web.Host (the local dev/demo host) - it opts out of
       # central package management in common.props since it pins its own inline package versions.
       - name: Build
