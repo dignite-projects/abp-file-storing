@@ -41,7 +41,7 @@ public class EfCoreDirectoryDescriptorRepository : EfCoreRepository<IFileExplore
     {
         return await (await GetListQueryAsync(
             creatorId, containerName, parentId
-        )).ToListAsync();
+        )).ToListAsync(GetCancellationToken(cancellationToken));
     }
 
     public async Task<List<DirectoryDescriptor>> GetAllByUserAsync(Guid creatorId, string containerName, CancellationToken cancellationToken = default(CancellationToken))

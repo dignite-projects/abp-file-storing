@@ -41,6 +41,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     private readonly IBlobContainerConfigurationProvider _blobContainerConfigurationProvider;
     private readonly IImageResizer _imageResizer;
     private readonly IMemoryCache _imageResizeCache;
+    private readonly ContainerNameValidator _containerNameValidator;
 
     private CancellationToken RequestCancellationToken =>
         LazyServiceProvider.LazyGetService<ICancellationTokenProvider>()?.Token ?? CancellationToken.None;
@@ -52,7 +53,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         IBlobContainerFactory blobContainerFactory,
         IBlobContainerConfigurationProvider blobContainerConfigurationProvider,
         IImageResizer imageResizer,
-        IMemoryCache imageResizeCache = null)
+        ContainerNameValidator containerNameValidator = null)
     {
         _fileRepository = fileRepository;
         _directoryRepository = directoryRepository;
@@ -60,7 +61,11 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         _blobContainerFactory = blobContainerFactory;
         _blobContainerConfigurationProvider = blobContainerConfigurationProvider;
         _imageResizer = imageResizer;
-        _imageResizeCache = imageResizeCache ?? FallbackImageResizeCache;
+        // Keep resized images in a cache owned by this module. The host's shared
+        // IMemoryCache may have unrelated entries and must not determine this
+        // endpoint's eviction policy.
+        _imageResizeCache = FallbackImageResizeCache;
+        _containerNameValidator = containerNameValidator ?? new ContainerNameValidator(blobContainerConfigurationProvider);
     }
 
     [Authorize]
@@ -87,8 +92,9 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     {
         var cancellationToken = RequestCancellationToken;
         var entity = await _fileRepository.GetAsync(id, cancellationToken: cancellationToken);
+        _containerNameValidator.Validate(entity.ContainerName);
 
-        if (input.DirectoryId.HasValue)
+        if (input.DirectoryIdSpecified)
         {
             entity.MoveToDirectory(input.DirectoryId);
         }
@@ -98,7 +104,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
             entity.Rename(input.Name);
         }
 
-        if (input.CellName != null)
+        if (input.CellNameSpecified)
         {
             entity.SetCell(input.CellName);
         }
@@ -132,6 +138,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         var result = await _fileRepository.FindAsync(id, false, cancellationToken);
         if (result != null)
         {
+            _containerNameValidator.Validate(result.ContainerName);
             await AuthorizationService.CheckAsync(result, CommonOperations.Delete);
             await _fileManager.DeleteAsync(result, cancellationToken);
         }
@@ -141,6 +148,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     public async Task DeleteByEntityIdAsync([NotNull] string containerName, string entityId)
     {
         var cancellationToken = RequestCancellationToken;
+        _containerNameValidator.Validate(containerName);
         var allowDelete = await AuthorizationService.IsGrantedAsync(FileExplorerPermissions.Files.Management);
         var creatorId = allowDelete?null:CurrentUser.Id;
         var result = await _fileRepository.GetListAsync(
@@ -163,6 +171,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         var entity = await _fileRepository.GetAsync(
             id,
             cancellationToken: RequestCancellationToken);
+        _containerNameValidator.Validate(entity.ContainerName);
         await AuthorizationService.CheckAsync(entity, CommonOperations.Get);
         return ObjectMapper.Map<FileDescriptor, FileDescriptorDto>(entity);
     }
@@ -179,6 +188,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     public async Task<PagedResultDto<FileDescriptorDto>> GetListAsync(GetFilesInput input)
     {
         var cancellationToken = RequestCancellationToken;
+        _containerNameValidator.Validate(input.ContainerName);
         if (!await AuthorizationService.IsGrantedAsync(FileExplorerPermissions.Files.Management))
         {
             input.CreatorId = CurrentUser.Id;
@@ -210,6 +220,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     public virtual async Task<IRemoteStreamContent> GetStreamAsync([NotNull] string containerName, [NotNull] string blobName, ImageResizeInput imageResize = null)
     {
         var cancellationToken = RequestCancellationToken;
+        _containerNameValidator.Validate(containerName);
         var entity = await _fileManager.GetOrNullAsync(containerName, blobName, cancellationToken);
 
         if (entity != null)
@@ -227,93 +238,117 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
             {
                 if (imageResize != null && (imageResize.Width > 0 || imageResize.Height > 0))
                 {
-                    if ((imageResize.Width ?? 0) > MaxResizeDimension ||
-                        (imageResize.Height ?? 0) > MaxResizeDimension)
+                    var disposeStream = true;
+                    try
                     {
-                        throw new BusinessException(
-                            code: FileStoringImagingErrorCodes.ImageResizeDimensionsTooLarge,
-                            message: $"Image resize dimensions cannot exceed {MaxResizeDimension} pixels."
-                        );
-                    }
-
-                    if (!stream.CanSeek)
-                    {
-                        throw new BusinessException(
-                            code: FileStoringImagingErrorCodes.ImageResizeFailure,
-                            message: "Image stream must support seeking."
-                        );
-                    }
-
-                    var imageInfo = await IdentifyImageAsync(stream);
-                    var detectedFormat = imageInfo?.Metadata.DecodedImageFormat;
-                    if (detectedFormat != null &&
-                        ImageFormatHelper.IsValidImage(detectedFormat.DefaultMimeType, ImageFormatHelper.AllowedImageUploadFormats))
-                    {
-                        var detectedImageInfo = imageInfo!;
-                        var totalPixels = (long)detectedImageInfo.Width * detectedImageInfo.Height;
-                        if (detectedImageInfo.Width > MaxResizeDimension ||
-                            detectedImageInfo.Height > MaxResizeDimension ||
-                            totalPixels > MaxResizePixelCount ||
-                            stream.Length > 0 && totalPixels / (double)stream.Length > MaxDecompressionRatio)
+                        if ((imageResize.Width ?? 0) > MaxResizeDimension ||
+                            (imageResize.Height ?? 0) > MaxResizeDimension)
                         {
                             throw new BusinessException(
-                                code: FileStoringImagingErrorCodes.ImageTooLarge,
-                                message: "The image is too large to resize safely."
+                                code: FileStoringImagingErrorCodes.ImageResizeDimensionsTooLarge,
+                                message: $"Image resize dimensions cannot exceed {MaxResizeDimension} pixels."
                             );
                         }
 
-                        var cacheKey = $"file-resize:{entity.TenantId}:{containerName}:{blobName}:{entity.Md5}:{imageResize.Width}:{imageResize.Height}";
-                        if (_imageResizeCache.TryGetValue<byte[]>(cacheKey, out var cachedImage) && cachedImage is not null)
+                        if (!stream.CanSeek)
                         {
-                            return new RemoteStreamContent(
-                                new MemoryStream(cachedImage, writable: false),
-                                entity.Name,
-                                detectedFormat.DefaultMimeType,
-                                cachedImage.LongLength,
-                                true);
+                            throw new BusinessException(
+                                code: FileStoringImagingErrorCodes.ImageResizeFailure,
+                                message: "Image stream must support seeking."
+                            );
                         }
 
-                        stream.Position = 0;
-                        var result = await _imageResizer.ResizeAsync(
-                            stream,
-                            new ImageResizeArgs(
-                                imageResize.Width > 0 ? (uint)imageResize.Width : null,
-                                imageResize.Height > 0 ? (uint)imageResize.Height : null,
-                                ImageResizeMode.Crop),
-                            detectedFormat.DefaultMimeType
-                        );
-
-                        if ((result.State == ImageProcessState.Done ||
-                             result.Result is not null && result.Result.CanRead) && result.Result is not null)
+                        var imageInfo = await IdentifyImageAsync(stream);
+                        var detectedFormat = imageInfo?.Metadata.DecodedImageFormat;
+                        if (detectedFormat != null &&
+                            ImageFormatHelper.IsValidImage(detectedFormat.DefaultMimeType, ImageFormatHelper.AllowedImageUploadFormats))
                         {
-                            var resizedBytes = await ReadStreamAsync(
-                                result.Result,
-                                MaxResizePixelCount * 4,
-                                cancellationToken);
-                            if (resizedBytes.Length <= MaxCachedImageBytes)
+                            var detectedImageInfo = imageInfo!;
+                            var totalPixels = (long)detectedImageInfo.Width * detectedImageInfo.Height;
+                            if (detectedImageInfo.Width > MaxResizeDimension ||
+                                detectedImageInfo.Height > MaxResizeDimension ||
+                                totalPixels > MaxResizePixelCount ||
+                                stream.Length > 0 && totalPixels / (double)stream.Length > MaxDecompressionRatio)
                             {
-                                _imageResizeCache.Set(
-                                    cacheKey,
-                                    resizedBytes,
-                                    new MemoryCacheEntryOptions
-                                    {
-                                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-                                        Size = resizedBytes.LongLength
-                                    });
+                                throw new BusinessException(
+                                    code: FileStoringImagingErrorCodes.ImageTooLarge,
+                                    message: "The image is too large to resize safely."
+                                );
                             }
 
-                            return new RemoteStreamContent(
-                                new MemoryStream(resizedBytes, writable: false),
-                                entity.Name,
-                                detectedFormat.DefaultMimeType,
-                                resizedBytes.LongLength,
-                                true);
+                            var cacheKey = $"file-resize:{entity.TenantId}:{containerName}:{blobName}:{entity.Md5}:{imageResize.Width}:{imageResize.Height}";
+                            if (_imageResizeCache.TryGetValue<byte[]>(cacheKey, out var cachedImage) && cachedImage is not null)
+                            {
+                                return new RemoteStreamContent(
+                                    new MemoryStream(cachedImage, writable: false),
+                                    entity.Name,
+                                    detectedFormat.DefaultMimeType,
+                                    cachedImage.LongLength,
+                                    true);
+                            }
+
+                            stream.Position = 0;
+                            var result = await _imageResizer.ResizeAsync(
+                                stream,
+                                new ImageResizeArgs(
+                                    imageResize.Width > 0 ? (uint)imageResize.Width : null,
+                                    imageResize.Height > 0 ? (uint)imageResize.Height : null,
+                                    ImageResizeMode.Crop),
+                                detectedFormat.DefaultMimeType
+                            );
+
+                            if ((result.State == ImageProcessState.Done ||
+                                 result.Result is not null && result.Result.CanRead) && result.Result is not null)
+                            {
+                                try
+                                {
+                                    var resizedBytes = await ReadStreamAsync(
+                                        result.Result,
+                                        MaxResizePixelCount * 4,
+                                        cancellationToken);
+                                    if (resizedBytes.Length <= MaxCachedImageBytes)
+                                    {
+                                        _imageResizeCache.Set(
+                                            cacheKey,
+                                            resizedBytes,
+                                            new MemoryCacheEntryOptions
+                                            {
+                                                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+                                                Size = resizedBytes.LongLength
+                                            });
+                                    }
+
+                                    return new RemoteStreamContent(
+                                        new MemoryStream(resizedBytes, writable: false),
+                                        entity.Name,
+                                        detectedFormat.DefaultMimeType,
+                                        resizedBytes.LongLength,
+                                        true);
+                                }
+                                finally
+                                {
+                                    result.Result.Dispose();
+                                }
+                            }
+
+                            throw new BusinessException(
+                                code: FileStoringImagingErrorCodes.ImageResizeFailure,
+                                message: result.State.ToString()
+                            );
                         }
 
-                        throw new BusinessException(
-                            code: FileStoringImagingErrorCodes.ImageResizeFailure,
-                            message: result.State.ToString()
-                        );
+                        // A resize request for a non-image falls back to the original
+                        // stream. Transfer ownership to the response before leaving the
+                        // try block so the finally block does not dispose it early.
+                        disposeStream = false;
+                        return new RemoteStreamContent(stream, entity.Name, entity.MimeType, stream.Length, true);
+                    }
+                    finally
+                    {
+                        if (disposeStream)
+                        {
+                            stream.Dispose();
+                        }
                     }
                 }
 
@@ -383,6 +418,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     /// <returns></returns>
     public virtual Task<FileContainerConfigurationDto> GetFileContainerConfigurationAsync([NotNull] string containerName)
     {
+        _containerNameValidator.Validate(containerName);
         var dto = new FileContainerConfigurationDto();
         var configuration = _blobContainerConfigurationProvider.Get(containerName);
         var blobSizeLimitConfiguration = configuration.GetFileSizeLimitConfiguration();
@@ -412,6 +448,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     public async Task<ListResultDto<FileDescriptorDto>> GetListByEntityIdAsync([NotNull] string containerName, string entityId)
     {
         var cancellationToken = RequestCancellationToken;
+        _containerNameValidator.Validate(containerName);
         //Verify authorization using a virtual file
         var virtualFileDescriptorEntity = new FileDescriptor(GuidGenerator.Create(), containerName, GuidGenerator.Create().ToString(), "virtualFileName.jpg", "image/jpeg", null, null, entityId, CurrentTenant.Id);
         await AuthorizationService.CheckAsync(virtualFileDescriptorEntity, CommonOperations.Get);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Dignite.FileExplorer.Directories;
 using Dignite.FileExplorer.Files;
@@ -19,6 +20,18 @@ namespace Dignite.FileExplorer.Update.Tests.Files;
 
 public class FileDescriptorAppService_Tests
 {
+    [Fact]
+    public void UpdateInput_ShouldTrackExplicitNullValues()
+    {
+        var input = JsonSerializer.Deserialize<UpdateFileInput>(
+            "{\"cellName\":null,\"directoryId\":null}",
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        input.ShouldNotBeNull();
+        input.CellNameSpecified.ShouldBeTrue();
+        input.DirectoryIdSpecified.ShouldBeTrue();
+    }
+
     [Fact]
     public async Task Rename_ShouldPreserveDirectoryAndCellName()
     {

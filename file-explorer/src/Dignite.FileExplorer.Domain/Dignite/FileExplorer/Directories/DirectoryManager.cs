@@ -54,6 +54,20 @@ public class DirectoryManager : DomainService
         }
     }
 
+    /// <summary>
+    /// Deletes a directory only after checking that it has no children or files.
+    /// The application service executes this method inside a transactional unit of work;
+    /// keeping the check and delete together prevents a successful check from being
+    /// separated from the actual delete by another request.
+    /// </summary>
+    public virtual async Task DeleteAsync(
+        DirectoryDescriptor directory,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureEmptyAsync(directory, cancellationToken);
+        await DirectoryDescriptorRepository.DeleteAsync(directory, cancellationToken: cancellationToken);
+    }
+
     public virtual async Task<DirectoryDescriptor> CreateAsync(
         Guid userId,
         string containerName,

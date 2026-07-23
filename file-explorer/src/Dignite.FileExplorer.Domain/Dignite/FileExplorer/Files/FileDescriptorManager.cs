@@ -23,6 +23,8 @@ public class FileDescriptorManager : DomainService
     private readonly IBlobContainerConfigurationProvider _blobContainerConfigurationProvider;
     private readonly ContainerNameValidator _containerNameValidator;
 
+    private const int CompensationTimeoutSeconds = 30;
+
     public FileDescriptorManager(
         IFileDescriptorRepository fileDescriptorRepository,
         IBlobContainerFactory blobContainerFactory,
@@ -179,24 +181,33 @@ public class FileDescriptorManager : DomainService
         }
         catch
         {
+            // Compensation must still run when the request was cancelled. Reusing the
+            // request token here makes every cleanup operation cancel immediately and
+            // leaves the newly written blob or the previous version behind. Use an
+            // independent, bounded token so cancellation remains responsive without
+            // sacrificing storage consistency.
+            using var compensationCts = new CancellationTokenSource(
+                TimeSpan.FromSeconds(CompensationTimeoutSeconds));
+            var compensationToken = compensationCts.Token;
+
             if (metadataInserted)
             {
-                await TryDeleteMetadataAsync(file, cancellationToken);
+                await TryDeleteMetadataAsync(file, compensationToken);
             }
 
             if (blobSaveAttempted)
             {
-                await TryDeleteBlobAsync(file.ContainerName, file.BlobName, cancellationToken);
+                await TryDeleteBlobAsync(file.ContainerName, file.BlobName, compensationToken);
             }
 
             if ((metadataDeleteAttempted || metadataDeleted) && previousFile != null)
             {
-                await TryRestoreMetadataAsync(previousFile, cancellationToken);
+                await TryRestoreMetadataAsync(previousFile, compensationToken);
             }
 
             if (previousBlob != null && previousBlobName != null)
             {
-                await TryRestoreBlobAsync(file.ContainerName, previousBlobName, previousBlob, cancellationToken);
+                await TryRestoreBlobAsync(file.ContainerName, previousBlobName, previousBlob, compensationToken);
             }
 
             throw;

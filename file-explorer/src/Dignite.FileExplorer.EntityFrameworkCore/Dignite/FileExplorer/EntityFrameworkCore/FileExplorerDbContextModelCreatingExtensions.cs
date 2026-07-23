@@ -27,6 +27,11 @@ public static class FileExplorerDbContextModelCreatingExtensions
             //Indexes
             b.HasIndex(q => new { q.TenantId, q.ContainerName, q.CreatorId, q.ParentId });
 
+            b.HasOne<DirectoryDescriptor>()
+                .WithMany()
+                .HasForeignKey(q => q.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             b.ApplyObjectExtensionMappings();
         });
 
@@ -49,14 +54,29 @@ public static class FileExplorerDbContextModelCreatingExtensions
             b.Property(q => q.EntityId).HasMaxLength(FileDescriptorConsts.MaxEntityIdLength);
 
             //Indexes
+            // SQL treats NULL values as distinct in a unique composite index. Keep
+            // host records in a separate index without TenantId so host-level names
+            // and hashes are unique as well as tenant-level records.
             b.HasIndex(q => new { q.TenantId, q.ContainerName, q.BlobName })
-                .IsUnique();
+                .IsUnique()
+                .HasFilter($"{nameof(FileDescriptor.TenantId)} IS NOT NULL");
+            b.HasIndex(q => new { q.ContainerName, q.BlobName })
+                .IsUnique()
+                .HasFilter($"{nameof(FileDescriptor.TenantId)} IS NULL");
             b.HasIndex(q => new { q.TenantId, q.ContainerName, q.Md5 })
                 .IsUnique()
-                .HasFilter($"{nameof(FileDescriptor.Md5)} <> ''");
+                .HasFilter($"{nameof(FileDescriptor.TenantId)} IS NOT NULL AND {nameof(FileDescriptor.Md5)} <> ''");
+            b.HasIndex(q => new { q.ContainerName, q.Md5 })
+                .IsUnique()
+                .HasFilter($"{nameof(FileDescriptor.TenantId)} IS NULL AND {nameof(FileDescriptor.Md5)} <> ''");
             b.HasIndex(q => new { q.TenantId, q.ContainerName, q.ReferBlobName });
             b.HasIndex(q => new { q.TenantId, q.ContainerName, q.EntityId });
             b.HasIndex(q => new { q.TenantId, q.ContainerName,q.CreationTime, q.CreatorId, q.DirectoryId });
+
+            b.HasOne<DirectoryDescriptor>()
+                .WithMany()
+                .HasForeignKey(q => q.DirectoryId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             b.ApplyObjectExtensionMappings();
         });

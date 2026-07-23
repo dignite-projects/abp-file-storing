@@ -428,10 +428,9 @@ public class HostModule : AbpModule
             });
         });
         
-        context.Services.AddAlwaysDisableUnitOfWorkTransaction();
         Configure<AbpUnitOfWorkDefaultOptions>(options =>
         {
-            options.TransactionBehavior = UnitOfWorkTransactionBehavior.Disabled;
+            options.TransactionBehavior = UnitOfWorkTransactionBehavior.Auto;
         });
     }
 

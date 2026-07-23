@@ -55,7 +55,9 @@ export interface ImageResizeInput {
 }
 
 export interface UpdateFileInput {
-  cellName?: string;
-  directoryId?: string;
+  /** Set to null to clear the cell assignment. */
+  cellName?: string | null;
+  /** Set to null to move the file to the container root. */
+  directoryId?: string | null;
   name?: string;
 }

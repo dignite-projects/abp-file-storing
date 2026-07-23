@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Threading;
+using Volo.Abp.Uow;
 
 namespace Dignite.FileExplorer.Directories;
 
@@ -48,13 +49,13 @@ public class DirectoryDescriptorAppService : FileExplorerAppService, IDirectoryD
     }
 
     [Authorize]
+    [UnitOfWork]
     public async Task DeleteAsync(Guid id)
     {
         var cancellationToken = RequestCancellationToken;
         var entity = await _directoryRepository.GetAsync(id, cancellationToken: cancellationToken);
         await AuthorizationService.CheckAsync(entity, CommonOperations.Delete);
-        await _directoryManager.EnsureEmptyAsync(entity, cancellationToken);
-        await _directoryRepository.DeleteAsync(entity, cancellationToken: cancellationToken);
+        await _directoryManager.DeleteAsync(entity, cancellationToken);
     }
 
     [Authorize]
