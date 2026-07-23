@@ -30,11 +30,6 @@ Run-Step "InstallLibs" {
     abp install-libs
 }
 
-Run-Step "DbMigrator" {
-    Set-Location (Join-Path $scriptRoot "../../Dignite.FileExplorer.Web.Host")
-    dotnet run --migrate-database
-}
-
 Run-Step "DevCert" {
     Set-Location (Join-Path $scriptRoot "../../Dignite.FileExplorer.Web.Host")
     dotnet dev-certs https -v -ep openiddict.pfx -p b495be51-7962-4bdd-acc3-694c070d50c9

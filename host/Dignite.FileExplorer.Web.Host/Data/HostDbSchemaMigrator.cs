@@ -1,5 +1,6 @@
 ﻿using Volo.Abp.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Dignite.FileExplorer.Web.Host.Data;
 
@@ -16,16 +17,13 @@ public class HostDbSchemaMigrator : ITransientDependency
     public async Task MigrateAsync()
     {
         
-        /* We intentionally resolving the HostDbContext
+        /* We intentionally resolve the HostDbContext
          * from IServiceProvider (instead of directly injecting it)
          * to properly get the connection string of the current tenant in the
          * current scope.
-         */
-
-        await _serviceProvider
-            .GetRequiredService<HostDbContext>()
-            .Database
-            .MigrateAsync();
-
+        */
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<HostDbContext>();
+        await dbContext.Database.MigrateAsync();
     }
 }
