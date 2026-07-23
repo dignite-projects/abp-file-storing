@@ -197,9 +197,13 @@ namespace Dignite.FileExplorer.Web.Host.Migrations
 
                     b.HasIndex("TenantId", "ContainerName", "ReferBlobName");
 
+                    b.HasIndex("TenantId", "ContainerName", "EntityId");
+
                     b.HasIndex("TenantId", "ContainerName", "Md5")
                         .IsUnique()
                         .HasFilter("Md5 <> ''");
+
+                    b.HasIndex("TenantId", "ContainerName", "ReferBlobName");
 
                     b.HasIndex("TenantId", "ContainerName", "CreationTime", "CreatorId", "DirectoryId");
 
