@@ -79,15 +79,13 @@ jobs:
           set -o pipefail
           report="$(dotnet list Dignite.Abp.FileStoring.slnx package --vulnerable --include-transitive)"
           printf '%s\n' "$report"
-          # Advisories with no remediation available yet (upstream-controlled). These are
-          # transitive dependencies of ABP 10.5.0 / EF Core with either no patched release or
-          # a patch that is incompatible with the pinned framework. Re-check on every ABP/EF
-          # bump and remove an entry once a compatible fix ships.
+          # Advisories with no remediation available yet (upstream-controlled). Re-check on every
+          # ABP/EF bump and remove an entry once a compatible fix ships.
           #   GHSA-rvv3-g6hj-g44x  AutoMapper 14.0.0 (via Volo.Abp.AutoMapper) - patched only in
           #                        15.1.1, a major bump incompatible with ABP 10.5.0.
-          #   GHSA-2m69-gcr7-jv3q  SQLitePCLRaw.lib.e_sqlite3 2.1.11 (via Microsoft.EntityFrameworkCore.Sqlite)
-          #                        - no patched release exists.
-          allowlist='GHSA-rvv3-g6hj-g44x|GHSA-2m69-gcr7-jv3q'
+          # (SQLitePCLRaw GHSA-2m69-gcr7-jv3q is remediated by the 2.1.12 pin in
+          #  Directory.Packages.props / the host project, so it is not allowlisted here.)
+          allowlist='GHSA-rvv3-g6hj-g44x'
           if printf '%s\n' "$report" | grep -Ev "$allowlist" | grep -Eiq '^\s*>\s+[^[:space:]]+\s+[^[:space:]]+\s+(high|critical)\b'; then
             echo "::error::High or critical NuGet vulnerabilities (outside the documented allowlist) block the release."
             exit 1

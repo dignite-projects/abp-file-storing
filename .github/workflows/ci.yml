@@ -55,8 +55,7 @@ jobs:
           # Advisories with no remediation available yet (upstream-controlled); see release.yml
           # for the rationale. Re-check on every ABP/EF bump.
           #   GHSA-rvv3-g6hj-g44x  AutoMapper 14.0.0 - patched only in 15.1.1 (incompatible major bump).
-          #   GHSA-2m69-gcr7-jv3q  SQLitePCLRaw.lib.e_sqlite3 2.1.11 - no patched release exists.
-          allowlist='GHSA-rvv3-g6hj-g44x|GHSA-2m69-gcr7-jv3q'
+          allowlist='GHSA-rvv3-g6hj-g44x'
           if printf '%s\n' "$report" | grep -Ev "$allowlist" | grep -Eiq '^\s*>\s+[^[:space:]]+\s+[^[:space:]]+\s+(high|critical)\b'; then
             echo "::error::High or critical NuGet vulnerabilities (outside the documented allowlist) block CI."
             exit 1
