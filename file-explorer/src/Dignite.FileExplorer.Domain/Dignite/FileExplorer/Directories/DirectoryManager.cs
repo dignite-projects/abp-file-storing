@@ -120,12 +120,11 @@ public class DirectoryManager : DomainService
         foreach (var item in children.Where(d=>d.Order>=order && d.Id!=directory.Id))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            item.Order=item.Order+1;
+            item.SetOrder(item.Order + 1);
             await DirectoryDescriptorRepository.UpdateAsync(item, cancellationToken: cancellationToken);
         }
 
-        directory.ParentId = parentId;
-        directory.Order = order;
+        directory.MoveTo(parentId, order);
         return await DirectoryDescriptorRepository.UpdateAsync(directory, cancellationToken: cancellationToken);
     }
 
@@ -175,7 +174,7 @@ public class DirectoryManager : DomainService
             }
         }
 
-        directory.Name = name;
+        directory.Rename(name);
         return await DirectoryDescriptorRepository.UpdateAsync(directory, cancellationToken: cancellationToken);
     }
 }
