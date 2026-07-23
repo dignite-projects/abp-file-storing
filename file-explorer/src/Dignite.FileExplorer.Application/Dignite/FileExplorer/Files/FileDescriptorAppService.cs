@@ -46,7 +46,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         LazyServiceProvider.LazyGetService<ICancellationTokenProvider>()?.Token ?? CancellationToken.None;
 
     public FileDescriptorAppService(
-        IFileDescriptorRepository blobRepository,
+        IFileDescriptorRepository fileRepository,
         IDirectoryDescriptorRepository directoryRepository,
         FileDescriptorManager fileManager,
         IBlobContainerFactory blobContainerFactory,
@@ -54,7 +54,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
         IImageResizer imageResizer,
         IMemoryCache imageResizeCache = null)
     {
-        _fileRepository = blobRepository;
+        _fileRepository = fileRepository;
         _directoryRepository = directoryRepository;
         _fileManager = fileManager;
         _blobContainerFactory = blobContainerFactory;
@@ -68,7 +68,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     {
         var cancellationToken = RequestCancellationToken;
         // Build a temporary file for authorization verification
-        var tempFileDescriptor = new FileDescriptor(Guid.NewGuid(), input.ContainerName, string.Empty, string.Empty, string.Empty, input.CellName, input.DirectoryId, input.EntityId, CurrentTenant.Id);
+        var tempFileDescriptor = new FileDescriptor(GuidGenerator.Create(), input.ContainerName, string.Empty, string.Empty, string.Empty, input.CellName, input.DirectoryId, input.EntityId, CurrentTenant.Id);
         await AuthorizationService.CheckAsync(tempFileDescriptor, CommonOperations.Create);
 
         // formal start of file creation
@@ -413,7 +413,7 @@ public class FileDescriptorAppService : ApplicationService, IFileDescriptorAppSe
     {
         var cancellationToken = RequestCancellationToken;
         //Verify authorization using a virtual file
-        var virtualFileDescriptorEntity = new FileDescriptor(Guid.NewGuid(), containerName, Guid.NewGuid().ToString(), "virtualFileName.jpg", "image/jpeg", null, null, entityId, CurrentTenant.Id);
+        var virtualFileDescriptorEntity = new FileDescriptor(GuidGenerator.Create(), containerName, GuidGenerator.Create().ToString(), "virtualFileName.jpg", "image/jpeg", null, null, entityId, CurrentTenant.Id);
         await AuthorizationService.CheckAsync(virtualFileDescriptorEntity, CommonOperations.Get);
 
         var result = await _fileRepository.GetListAsync(
