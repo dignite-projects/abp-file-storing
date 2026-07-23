@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { FileExplorerViewComponent } from './file-explorer-view.component';
-import { FileExplorerModule } from '../../../file-explorer.module';
 import { CoreTestingModule } from '@abp/ng.core/testing';
 import { NgxValidateCoreModule } from '@ngx-validate/core';
 
@@ -11,7 +10,7 @@ describe('FileExplorerViewComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FileExplorerModule, CoreTestingModule.withConfig(), NgxValidateCoreModule.forRoot()]
+      imports: [FileExplorerViewComponent,CoreTestingModule.withConfig(), NgxValidateCoreModule.forRoot()]
     })
     .compileComponents();
     

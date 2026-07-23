@@ -1,3 +1,3 @@
 export * from './enums';
-export * from './file-config.module';
+export * from './provide-file-explorer-config';
 export * from './providers';

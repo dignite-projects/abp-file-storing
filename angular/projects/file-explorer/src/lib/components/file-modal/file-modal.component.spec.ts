@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SimpleChange } from '@angular/core';
 
 import { FileModalComponent } from './file-modal.component';
-import { FileExplorerModule } from '../../file-explorer.module';
 import { CoreTestingModule } from '@abp/ng.core/testing';
 import { NgxValidateCoreModule } from '@ngx-validate/core';
 
@@ -12,7 +11,7 @@ describe('FileModalComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [FileExplorerModule, CoreTestingModule.withConfig(), NgxValidateCoreModule.forRoot()]
+      imports: [FileModalComponent,CoreTestingModule.withConfig(), NgxValidateCoreModule.forRoot()]
     });
     fixture = TestBed.createComponent(FileModalComponent);
     component = fixture.componentInstance;

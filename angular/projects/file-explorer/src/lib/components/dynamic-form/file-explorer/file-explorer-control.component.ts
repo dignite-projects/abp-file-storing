@@ -1,13 +1,15 @@
 import { ConfigStateService, EnvironmentService } from '@abp/ng.core';
+import { FilePickerComponent } from '../../file-picker/file-picker.component';
 import { ChangeDetectorRef, Component, ElementRef, inject, Input, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 
 @Component({
   
-  standalone: false,// eslint-disable-next-line @angular-eslint/component-selector
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'fe-file-explorer-control',
   templateUrl: './file-explorer-control.component.html',
   styleUrls: ['./file-explorer-control.component.scss'],
+  imports: [ReactiveFormsModule, FilePickerComponent],
 })
 export class FileExplorerControlComponent {
   constructor(private fb: FormBuilder) {}

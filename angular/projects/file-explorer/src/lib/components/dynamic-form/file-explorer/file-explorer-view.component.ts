@@ -1,11 +1,13 @@
 /* eslint-disable @angular-eslint/component-selector */
 import { AfterContentInit, Component, Input } from '@angular/core';
+import { FilePreviewComponent } from '../../../previews/file-preview.component';
 
 @Component({
   
-  standalone: false,selector: 'fe-file-explorer-view',
+  selector: 'fe-file-explorer-view',
   templateUrl: './file-explorer-view.component.html',
   styleUrl: './file-explorer-view.component.scss',
+  imports: [FilePreviewComponent],
 })
 export class FileExplorerViewComponent implements AfterContentInit {
   /**展示则内容 */

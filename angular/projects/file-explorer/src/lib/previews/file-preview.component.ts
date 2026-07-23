@@ -1,13 +1,15 @@
 import { AfterContentInit, Component, Input, TemplateRef } from '@angular/core';
 import { ImageTypeOption } from './models';
 import { NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
+import { CommonModule } from '@angular/common';
 
 @Component({
   
-  standalone: false,// eslint-disable-next-line @angular-eslint/component-selector
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'fe-file-preview',
   templateUrl: './file-preview.component.html',
-  styleUrls: ['./file-preview.component.scss']
+  styleUrls: ['./file-preview.component.scss'],
+  imports: [CommonModule],
 })
 export class FilePreviewComponent implements AfterContentInit{
 
