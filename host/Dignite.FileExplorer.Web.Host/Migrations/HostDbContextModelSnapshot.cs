@@ -199,6 +199,8 @@ namespace Dignite.FileExplorer.Web.Host.Migrations
 
                     b.HasIndex("TenantId", "ContainerName", "EntityId");
 
+                    b.HasIndex("TenantId", "ContainerName", "EntityId");
+
                     b.HasIndex("TenantId", "ContainerName", "Md5")
                         .IsUnique()
                         .HasFilter("Md5 <> ''");
