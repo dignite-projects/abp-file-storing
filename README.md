@@ -1,5 +1,18 @@
 # Dignite Abp File Storing
 
+> [!IMPORTANT]
+> This repository is archived. Active development moved to the lockstep monorepo:
+> [`dignite-projects/abp-modules`](https://github.com/dignite-projects/abp-modules).
+>
+> New File Storing source and documentation:
+> [`abp-modules/file-storing`](https://github.com/dignite-projects/abp-modules/tree/main/file-storing).
+> Please open new issues and pull requests in
+> [`dignite-projects/abp-modules`](https://github.com/dignite-projects/abp-modules/issues).
+>
+> Package IDs, namespaces, and published package names are unchanged. Only the source repository changed.
+> Contributors should clone the new repository, or update an existing remote to
+> `https://github.com/dignite-projects/abp-modules.git`.
+
 This repository contains the extracted file storing and file explorer modules from `dignite-abp`.
 
 The target layout is:
